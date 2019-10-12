@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  cuts:
+    build: .
+    command: >
+      gunicorn -b 0.0.0.0:8000
+        --access-logfile -
+        --reload
+        "cuts.app:create_app()"
+    environment:
+      PYTHONUNBUFFERED: 'true'
+    networks:
+      - net
+    volumes:
+      - '.:/cuts'
+    ports:
+      - '8000:8000'
+
+networks:
+  net:
