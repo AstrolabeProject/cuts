@@ -1,5 +1,7 @@
 from flask import Flask
 
+from snakeeyes.extensions import debug_toolbar
+
 
 def create_app():
     """
@@ -12,6 +14,8 @@ def create_app():
     app.config.from_object('config.settings')
     app.config.from_pyfile('settings.py', silent=True)
 
+    extensions(app)
+
     @app.route('/')
     def index():
         """
@@ -22,3 +26,16 @@ def create_app():
         return 'Hello Flask World!\n'
 
     return app
+
+
+def extensions(app):
+    """
+    Register 0 or more extensions (mutates the app passed in).
+
+    :param app: Flask application instance
+    :return: None
+    """
+    debug_toolbar.init_app(app)
+
+    return None
+
