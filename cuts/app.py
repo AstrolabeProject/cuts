@@ -1,6 +1,6 @@
-import datetime
 from flask import Flask
 
+from cuts.blueprints.pages import pages
 from cuts.extensions import debug_toolbar
 
 
@@ -15,16 +15,8 @@ def create_app():
     app.config.from_object('config.settings')
     app.config.from_pyfile('settings.py', silent=True)
 
+    app.register_blueprint(pages)
     extensions(app)
-
-    @app.route('/')
-    def index():
-        """
-        Render a Hello World response.
-
-        :return: Flask response
-        """
-        return 'Hello Flask Server! ({0})\n'.format(datetime.datetime.now())
 
     return app
 
