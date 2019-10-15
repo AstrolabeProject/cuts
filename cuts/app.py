@@ -1,6 +1,7 @@
+import datetime
 from flask import Flask
 
-from snakeeyes.extensions import debug_toolbar
+from cuts.extensions import debug_toolbar
 
 
 def create_app():
@@ -23,7 +24,7 @@ def create_app():
 
         :return: Flask response
         """
-        return 'Hello Flask World!\n'
+        return 'Hello Flask Server! ({0})\n'.format(datetime.datetime.now())
 
     return app
 
