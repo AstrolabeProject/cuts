@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  web:
+    # image: astrolabe/cuts
+    image: cuts:latest
+    command: >
+      gunicorn -b 0.0.0.0:8000
+        --access-logfile -
+        "cuts.app:create_app()"
+    environment:
+      PYTHONUNBUFFERED: 'true'
+    networks:
+      - net
+    volumes:
+      - './images:/vos/images:ro'
+    ports:
+      - '8000:8000'
+
+networks:
+  net:

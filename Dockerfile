@@ -3,7 +3,6 @@ MAINTAINER Tom Hicks <hickst@email.arizona.edu>
 
 ENV INSTALL_PATH /cuts
 RUN mkdir -p $INSTALL_PATH
-
 WORKDIR $INSTALL_PATH
 
 COPY requirements.txt requirements.txt
