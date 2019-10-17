@@ -21,6 +21,9 @@ help:
 clean:
 	rm -rf config/__pycache__
 	rm -rf cuts/__pycache__
+	rm -rf cuts/blueprints/__pycache__
+	rm -rf cuts/blueprints/img/__pycache__
+	rm -rf cuts/blueprints/pages/__pycache__
 	rm -rf cuts/static/__pycache__
 
 devdown:
