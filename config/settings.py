@@ -1,7 +1,6 @@
 # never, ever use DEBUG in production
 DEBUG = True
 
-SERVER_NAME = 'localhost:8000'
 SECRET_KEY = 'insecurekeyfordevel'
 
 # Image service
