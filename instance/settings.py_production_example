@@ -1,1 +1,7 @@
+# never, ever use DEBUG in production
 DEBUG = False
+
+SECRET_KEY = 'moresecurekeyforprod'
+
+CELERY_BROKER_URL = 'redis://:amuchmoresecurepassword@redis:6379/0'
+CELERY_RESULT_BACKEND = 'redis://:amuchmoresecurepassword@redis:6379/0'
