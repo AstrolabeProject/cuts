@@ -43,6 +43,7 @@ proup:
 
 
 exec:
+	docker cp .bash_env ${FLNAME}:/etc/bash_env.trh
 	docker exec -it ${FLNAME} bash
 
 run:
