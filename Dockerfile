@@ -10,4 +10,4 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-CMD gunicorn -c "python:config.gunicorn" "cuts.app:create_app()"
+CMD [ "gunicorn", "-c", "/cuts/config/gunicorn.py", "cuts.app:create_app()" ]

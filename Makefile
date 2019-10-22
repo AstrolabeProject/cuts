@@ -1,6 +1,6 @@
-IMG=cuts
+IMG=cuts:devel
 STACK=cuts
-FLNAME=cuts_web_1
+FLNAME=cuts_cuts_1
 
 .PHONY: help build clean docker exec run stop watch
 

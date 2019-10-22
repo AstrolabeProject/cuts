@@ -1,17 +1,7 @@
-version: '3'
+version: '3.7'
 
 services:
-  redis:
-    image: 'redis:5.0-alpine'
-    command: redis-server --requirepass devpassword
-    networks:
-      - net
-    volumes:
-      - 'redis:/var/lib/redis/data'
-    ports:
-      - '6379:6379'
-
-  web:
+  cuts:
     build: .
     image: cuts:devel
     command: >
@@ -30,9 +20,8 @@ services:
 
   celery:
     build: .
+    image: cuts:devel
     command: celery worker -l debug -A cuts.blueprints.img.tasks
-    env_file:
-      - '.env'
     networks:
       - net
     volumes:
@@ -41,6 +30,5 @@ services:
 
 networks:
   net:
-
-volumes:
-  redis:
+    external:
+      name: vos_net
