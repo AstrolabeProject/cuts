@@ -1,13 +1,33 @@
 version: '3.7'
 
 services:
-  cuts:
-    build: .
+  redis:
+    image: redis:5-alpine
+    command: redis-server --requirepass devpassword
+    networks:
+      - net
+    volumes:
+      - vos_redis:/var/lib/redis/data
+    ports:
+      - '6379:6379'
+
+
+  celery:
     image: cuts:devel
-    command: >
-      gunicorn -c "python:config.gunicorn"
-        --reload
-        "cuts.app:create_app()"
+    command: celery worker -l debug -A cuts.blueprints.img.tasks
+    deploy:
+      restart_policy:
+        condition: none
+    networks:
+      - net
+    depends_on:
+      - redis
+
+
+  cuts:
+    image: cuts:devel
+    # command: >
+    #   gunicorn -c "/cuts/config/gunicorn.py" "cuts.app:create_app()"
     environment:
       PYTHONUNBUFFERED: 'true'
     networks:
@@ -17,18 +37,13 @@ services:
       - './images:/vos/images:ro'
     ports:
       - '8000:8000'
-
-  celery:
-    build: .
-    image: cuts:devel
-    command: celery worker -l debug -A cuts.blueprints.img.tasks
-    networks:
-      - net
-    volumes:
-      - '.:/cuts'
+    depends_on:
+      - celery
 
 
 networks:
   net:
-    external:
-      name: vos_net
+    attachable: true
+
+volumes:
+  vos_redis:

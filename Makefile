@@ -2,20 +2,18 @@ IMG=cuts:devel
 STACK=cuts
 FLNAME=cuts_cuts_1
 
-.PHONY: help build clean docker exec run stop watch
+.PHONY: help clean docker down exec run stop up watch
 
 help:
-	@echo "Make what? Try: clean, devdown, devup, prodown, proup, docker, exec, run, stop, watch"
+	@echo "Make what? Try: clean, docker, down, exec, run, stop, up, watch"
 	@echo '    where: help    - show this help message'
 	@echo '           clean   - remove all cache files'
-	@echo '           devdown - stop a reloading Flask stack in development mode'
-	@echo '           devup   - start a reloading Flask stack in development mode'
-	@echo '           prodown - stop a Cuts server production stack'
-	@echo '           proup   - start a Cuts server stack in production mode'
-	@echo '           docker  - build a Flask server container image'
+	@echo '           docker  - build a Flask/Gunicorn server container image'
+	@echo '           down    - stop a Cuts server stack'
 	@echo '           exec    - exec into the running Flask server container'
 	@echo '           run     - start a standalone Flask server container, for testing'
 	@echo '           stop    - stop a running standalone Flask server container'
+	@echo '           up      - start a Cuts server stack'
 	@echo '           watch   - show logfile for a running Flask server container'
 
 clean:
@@ -26,20 +24,14 @@ clean:
 	rm -rf cuts/blueprints/pages/__pycache__
 	rm -rf cuts/static/__pycache__
 
-devdown:
-	docker-compose down
-
-devup:
-	docker-compose up
-
 docker:
 	docker build -t ${IMG} .
 
-prodown:
+down:
 	docker stack rm ${STACK}
 
-proup:
-	docker stack deploy -c docker-compose-prod.yml ${STACK}
+up:
+	docker stack deploy -c docker-compose.yml ${STACK}
 
 
 exec:
