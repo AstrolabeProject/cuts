@@ -1,40 +1,39 @@
-from flask import Blueprint, abort, render_template, request
+from flask import Blueprint, abort, jsonify, request
 # from flask_cors import CORS
-from jinja2 import TemplateNotFound
-
 
 img = Blueprint('img', __name__, template_folder='templates')
 
 
+#
+# Full image methods
+#
+
+# list all FITS images found in the image directory
 @img.route('/img/list')
-def list():
+def list ():
     # required to avoid circular imports
     from cuts.blueprints.img.tasks import list_images
     return list_images()
 
-
-@img.route('/img/query')
-def query():
-    # required to avoid circular imports
-    from cuts.blueprints.img.tasks import query_images
-    return query_images(request.args)
-
-
 @img.route('/img/<name>', methods=['GET'])
-def image(name):
+def fetch (name):
     # required to avoid circular imports
-    from cuts.blueprints.img.tasks import send_image
-    return send_image(name)
+    from cuts.blueprints.img.tasks import fetch_image
+    return fetch_image(name)
 
 
-@img.route('/img/help')
-def help():
-    return render_template('help/help.html')
+#
+# Image cutout methods
+#
 
-# general routing for image help pages
-@img.route('/img/help/<topic>')
-def show_help (topic):
-    try:
-        return render_template('help/%s.html' % topic)
-    except TemplateNotFound:
-        abort(404)
+# Use Astrocut to produce and return a cutout
+@img.route('/img/ac')
+def cutout_ac (args):
+    # required to avoid circular imports
+    from cuts.blueprints.img.tasks import get_astrocut_cutout
+    return get_astrocut_cutout(request.args)
+
+
+@img.route('/echo')
+def echo ():
+    return jsonify(request.args)
