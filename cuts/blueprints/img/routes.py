@@ -10,13 +10,14 @@ img = Blueprint('img', __name__, template_folder='templates')
 
 # list all FITS images found in the image directory
 @img.route('/img/list')
-def list ():
+def img_list ():
     # required to avoid circular imports
     from cuts.blueprints.img.tasks import list_images
     return list_images()
 
+# fetch a specific image by full name
 @img.route('/img/<name>', methods=['GET'])
-def fetch (name):
+def img_fetch (name):
     # required to avoid circular imports
     from cuts.blueprints.img.tasks import fetch_image
     return fetch_image(name)
@@ -25,6 +26,21 @@ def fetch (name):
 #
 # Image cutout methods
 #
+
+# list all existing cutouts in the cache directory
+@img.route('/img/co/list')
+def co_list ():
+    # required to avoid circular imports
+    from cuts.blueprints.img.tasks import list_cutouts
+    return list_cutouts()
+
+# fetch a specific cutout by full name
+@img.route('/img/co/<name>', methods=['GET'])
+def co_fetch (name):
+    # required to avoid circular imports
+    from cuts.blueprints.img.tasks import fetch_cutout
+    return fetch_cutout(name)
+
 
 # Use Astrocut to produce and return a cutout
 @img.route('/img/ac')

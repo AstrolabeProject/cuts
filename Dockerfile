@@ -2,7 +2,7 @@ FROM python:3.7-slim
 MAINTAINER Tom Hicks <hickst@email.arizona.edu>
 
 ENV INSTALL_PATH /cuts
-RUN mkdir -p $INSTALL_PATH
+RUN mkdir -p $INSTALL_PATH /vos/images /vos/cutouts
 WORKDIR $INSTALL_PATH
 
 COPY requirements.txt requirements.txt
