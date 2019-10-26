@@ -1,6 +1,7 @@
+ENVLOC=/etc/trhenv
 IMG=cuts:devel
 STACK=cuts
-FLNAME=cuts_cuts_1
+NAME=cuts_cuts_1
 
 .PHONY: help clean docker down exec run stop up watch
 
@@ -10,10 +11,10 @@ help:
 	@echo '           clean   - remove all cache files'
 	@echo '           docker  - build a Flask/Gunicorn server container image'
 	@echo '           down    - stop a Cuts server stack'
-	@echo '           exec    - exec into the running Flask server container'
-	@echo '           run     - start a standalone Flask server container, for testing'
+	@echo '           exec    - exec into running Flask server (CLI arg: NAME=containerID)'
+	@echo '           run     - start a standalone Flask server container (for testing)'
 	@echo '           stop    - stop a running standalone Flask server container'
-	@echo '           up      - start a Cuts server stack'
+	@echo '           up      - start a Cuts server stack (for development)'
 	@echo '           watch   - show logfile for a running Flask server container'
 
 clean:
@@ -35,17 +36,17 @@ up:
 
 
 exec:
-	docker cp .bash_env ${FLNAME}:/etc/bash_env.trh
-	docker exec -it ${FLNAME} bash
+	docker cp .bash_env ${NAME}:${ENVLOC}
+	docker exec -it ${NAME} bash
 
 run:
-	docker run -d --rm --name ${FLNAME} -p 8000:8000 -v ${PWD}/images:/vos/images:ro ${IMG}
+	docker run -d --rm --name ${NAME} -p 8000:8000 -v ${PWD}/images:/vos/images:ro ${IMG}
 
 stop:
-	docker stop ${FLNAME}
+	docker stop ${NAME}
 
 watch:
-	docker logs -f ${FLNAME}
+	docker logs -f ${NAME}
 
 %:
 	@:
