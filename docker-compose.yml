@@ -28,7 +28,8 @@ services:
       PYTHONUNBUFFERED: 'true'
     volumes:
       - '.:/cuts'
-      - './images:/vos/images:ro'
+#      - './images:/vos/images:ro'
+      - './images:/vos/images'
     ports:
       - '8000:8000'
     depends_on:

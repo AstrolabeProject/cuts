@@ -4,7 +4,7 @@ DEBUG = True
 SECRET_KEY = 'insecurekeyfordevel'
 
 # Image service
-CUTOUT_DIR = '/vos/cutouts'
+CUTOUTS_DIR = '/vos/cutouts'
 IMAGES_DIR = '/vos/images'
 IMAGE_EXTS = [ 'fits', 'fits.gz' ]
 
