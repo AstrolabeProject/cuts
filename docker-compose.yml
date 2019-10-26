@@ -2,10 +2,10 @@ version: '3.7'
 
 services:
   redis:
-    image: redis:5-alpine
+    image: redis:5.0-alpine
     command: redis-server --requirepass devpassword
     volumes:
-      - vos_redis:/var/lib/redis/data
+      - redis:/var/lib/redis/data
     ports:
       - '6379:6379'
 
@@ -22,8 +22,6 @@ services:
 
   cuts:
     image: cuts:devel
-    # command: >
-    #   gunicorn -c "/cuts/config/gunicorn.py" "cuts.app:create_app()"
     environment:
       PYTHONUNBUFFERED: 'true'
     volumes:
@@ -42,4 +40,4 @@ networks:
     attachable: true
 
 volumes:
-  vos_redis:
+  redis:

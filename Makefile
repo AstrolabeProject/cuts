@@ -1,7 +1,7 @@
 ENVLOC=/etc/trhenv
 IMG=cuts:devel
-STACK=cuts
-NAME=cuts_cuts_1
+STACK=vos
+NAME=vos_cuts_1
 
 .PHONY: help clean docker down exec run stop up watch
 
