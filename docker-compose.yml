@@ -4,8 +4,6 @@ services:
   redis:
     image: redis:5-alpine
     command: redis-server --requirepass devpassword
-    networks:
-      - net
     volumes:
       - vos_redis:/var/lib/redis/data
     ports:
@@ -18,8 +16,6 @@ services:
     deploy:
       restart_policy:
         condition: none
-    networks:
-      - net
     depends_on:
       - redis
 
@@ -30,8 +26,6 @@ services:
     #   gunicorn -c "/cuts/config/gunicorn.py" "cuts.app:create_app()"
     environment:
       PYTHONUNBUFFERED: 'true'
-    networks:
-      - net
     volumes:
       - '.:/cuts'
       - './images:/vos/images:ro'
@@ -42,7 +36,8 @@ services:
 
 
 networks:
-  net:
+  default:
+    name: cuts_net
     attachable: true
 
 volumes:
