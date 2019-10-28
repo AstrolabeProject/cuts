@@ -74,8 +74,8 @@ def get_astrocut_cutout (args):
 
     # logger.error("CUTOUTS_DIR=%s",CUTOUTS_DIR) # REMOVE LATER
 
-    # co_files = fits_cut(fyls, center, co_size, correct_wcs=False, single_outfile=False, output_dir=CUTOUTS_DIR)
-    co_files = fits_cut(fyls, center, co_size, correct_wcs=False, single_outfile=False)
+    # cutouts should be written to the cutouts directory but it is failing due to an Astrocut bug
+    co_files = fits_cut(fyls, center, co_size, single_outfile=False, output_dir=CUTOUTS_DIR)
 
     # logger.error("CO_FILES=%s",co_files) # REMOVE LATER
 
