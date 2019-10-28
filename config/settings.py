@@ -5,6 +5,8 @@ SECRET_KEY = 'insecurekeyfordevel'
 
 # Image service
 CUTOUTS_DIR = '/vos/cutouts'
+CUTOUTS_LIB = 'astropy'
+CUTOUTS_MODE = 'trim'
 IMAGES_DIR = '/vos/images'
 IMAGE_EXTS = [ 'fits', 'fits.gz' ]
 
