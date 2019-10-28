@@ -42,6 +42,13 @@ def co_fetch (name):
     return fetch_cutout(name)
 
 
+# Use Astropy Cutout2D to produce and return a cutout
+@img.route('/img/co/2d')
+def co_2d ():
+    # required to avoid circular imports
+    from cuts.blueprints.img.tasks import get_astropy_cutout
+    return get_astropy_cutout(request.args)
+
 # Use Astrocut to produce and return a cutout
 @img.route('/img/co/ac')
 def co_ac ():
