@@ -1,6 +1,6 @@
 import os
 
-from flask import abort, current_app, jsonify, request, send_file
+from flask import abort, current_app, jsonify, request, send_file, send_from_directory
 
 from cuts.app import create_celery_app
 from config.settings import CUTOUTS_DIR, CUTOUTS_MODE, IMAGES_DIR, IMAGE_EXTS
@@ -11,11 +11,14 @@ from astropy import units as u
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy.nddata import Cutout2D
+from astropy.nddata.utils import NoOverlapError, PartialOverlapError
 from astropy.wcs import WCS
 
 
 # Instantiate the Celery client appication
 celery = create_celery_app()
+
+FITS_MIME_TYPE = "image/fits"
 
 # logger = current_app.logger                 # TODO: FIX
 
@@ -32,7 +35,8 @@ def list_images ():
 def fetch_image (name):
     filename = "{0}/{1}".format(IMAGES_DIR, name)
     if (os.path.exists(filename) and os.path.isfile(filename)):
-        return send_file(filename, mimetype="application/fits")
+        return send_from_directory(IMAGES_DIR, name, mimetype=FITS_MIME_TYPE,
+                                   as_attachment=True, attachment_filename=name)
     abort(404)
 
 
@@ -49,7 +53,8 @@ def list_cutouts ():
 def fetch_cutout (name):
     filename = "{0}/{1}".format(CUTOUTS_DIR, name)
     if (os.path.exists(filename) and os.path.isfile(filename)):
-        return send_file(filename, mimetype="application/fits")
+        return send_from_directory(CUTOUTS_DIR, name, mimetype=FITS_MIME_TYPE,
+                                   as_attachment=True, attachment_filename=name)
     abort(404)
 
 
@@ -66,7 +71,11 @@ def get_astrocut_cutout (args):
     co_files = fits_cut([imagePath], co_args['center'], co_args['co_size'],
                         single_outfile=False, output_dir=CUTOUTS_DIR)
 
-    return send_file(co_files[0], mimetype="application/fits")
+    # create a return filename and return file
+    co_filename = make_ac_cutout_filename(co_files[0], co_args)
+    return send_file(co_files[0], mimetype=FITS_MIME_TYPE,
+                     as_attachment=True, attachment_filename=co_filename)
+
 
 
 @celery.task()
@@ -85,7 +94,7 @@ def get_astropy_cutout (args):
     try:
         cutout = Cutout2D(hdu.data, position=co_args['center'], size=co_args['co_size'],
                           wcs=wcs, mode=CUTOUTS_MODE)
-    except (NoOverlapError, PartialOverlapException):
+    except (NoOverlapError, PartialOverlapError):
         abort(400)
 
     # save cutout image in the FITS HDU and update FITS header with cutout WCS
@@ -93,10 +102,12 @@ def get_astropy_cutout (args):
     hdu.header.update(cutout.wcs.to_header())
 
     # write the cutout to a new FITS file
-    co_filename = make_cutout_filepath(make_cutout_filename(imagePath, cutout, co_args))
-    hdu.writeto(co_filename, overwrite=True)
+    co_filename = make_cutout_filename(imagePath, cutout, co_args)
+    co_filepath = make_cutout_filepath(co_filename)
+    hdu.writeto(co_filepath, overwrite=True)
 
-    return send_file(co_filename, mimetype="application/fits")
+    return send_file(co_filepath, mimetype=FITS_MIME_TYPE,
+                     as_attachment=True, attachment_filename=co_filename)
 
 
 #
@@ -109,7 +120,15 @@ def list_fits_files (imageDir=IMAGES_DIR, extents=IMAGE_EXTS):
     return [ fyl for fyl in os.listdir(imageDir) if (fyl.endswith(tuple(extents))) ]
 
 
-# Return a filename for the new cutout from info in the given parameters
+# Return a filename for the Astrocut cutout from info in the given parameters
+def make_ac_cutout_filename (imagePath, co_args):
+    baseName = os.path.splitext(os.path.basename(imagePath))[0]
+    ra = co_args['ra']
+    dec = co_args['dec']
+    size = co_args['sizeDeg']
+    return "{0}_{1}_{2}_{3}x{4}_astrocut.fits".format(baseName, ra, dec, size, size)
+
+# Return a filename for the Astropy cutout from info in the given parameters
 def make_cutout_filename (imagePath, cutout, co_args):
     baseName = os.path.splitext(os.path.basename(imagePath))[0]
     ra = co_args['ra']
