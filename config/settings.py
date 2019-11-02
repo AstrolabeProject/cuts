@@ -1,6 +1,8 @@
 # never, ever use DEBUG in production
 DEBUG = True
 
+LOG_LEVEL = 'INFO'  # CRITICAL / ERROR / WARNING / INFO / DEBUG
+
 SECRET_KEY = 'insecurekeyfordevel'
 
 # Image service

@@ -48,6 +48,8 @@ def create_app(settings_override=None):
     if settings_override:
         app.config.update(settings_override)
 
+    app.logger.setLevel(app.config['LOG_LEVEL'])
+
     app.register_blueprint(img)
     app.register_blueprint(pages)
     extensions(app)

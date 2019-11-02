@@ -20,7 +20,6 @@ celery = create_celery_app()
 
 FITS_MIME_TYPE = "image/fits"
 
-# logger = current_app.logger                 # TODO: FIX
 
 # Full image methods
 #
@@ -37,6 +36,7 @@ def fetch_image (name):
     if (os.path.exists(filename) and os.path.isfile(filename)):
         return send_from_directory(IMAGES_DIR, name, mimetype=FITS_MIME_TYPE,
                                    as_attachment=True, attachment_filename=name)
+    current_app.logger.error("Images file {0} not found in images directory {1}".format(name, IMAGES_DIR))
     abort(404)
 
 
@@ -55,6 +55,7 @@ def fetch_cutout (name):
     if (os.path.exists(filename) and os.path.isfile(filename)):
         return send_from_directory(CUTOUTS_DIR, name, mimetype=FITS_MIME_TYPE,
                                    as_attachment=True, attachment_filename=name)
+    current_app.logger.error("Cutout file {0} not found in cutouts directory {1}".format(name, CUTOUTS_DIR))
     abort(404)
 
 
@@ -65,6 +66,9 @@ def get_astrocut_cutout (args):
     # figure out which image to make cutout from
     imagePath = find_image(co_args)
     if (not imagePath):
+        filt = co_args.get('filter')
+        current_app.logger.error(
+            "An image was not found for filter {0} in images directory {1}".format(filt, IMAGES_DIR))
         abort(404)
 
     # cutouts should be written to the cutouts directory but fails due to an Astrocut bug
@@ -85,6 +89,9 @@ def get_astropy_cutout (args):
     # figure out which image to make cutout from
     imagePath = find_image(co_args)
     if (not imagePath):
+        filt = co_args.get('filter')
+        current_app.logger.error(
+            "An image was not found for filter {0} in images directory {1}".format(filt, IMAGES_DIR))
         abort(404)
 
     hdu = fits.open(imagePath)[0]
@@ -95,6 +102,8 @@ def get_astropy_cutout (args):
         cutout = Cutout2D(hdu.data, position=co_args['center'], size=co_args['co_size'],
                           wcs=wcs, mode=CUTOUTS_MODE)
     except (NoOverlapError, PartialOverlapError):
+        current_app.logger.error(
+            "There is no overlap between the reference image and the given center coordinate: {0}".format(co_args['center']))
         abort(400)
 
     # save cutout image in the FITS HDU and update FITS header with cutout WCS
@@ -148,6 +157,7 @@ def parse_cutout_args (args):
 
     raStr = args.get("ra")
     if (not raStr):
+        current_app.logger.error("Right ascension must be specified, via the 'ra' argument")
         abort(400)
     else:
         ra = float(raStr)
@@ -155,6 +165,7 @@ def parse_cutout_args (args):
 
     decStr = args.get("dec")
     if (not decStr):
+        current_app.logger.error("Declination must be specified, via the 'dec' argument")
         abort(400)
     else:
         dec = float(decStr)
@@ -164,6 +175,7 @@ def parse_cutout_args (args):
 
     filt = args.get("filter")
     if (not filt):
+        current_app.logger.error("An image filter must be specified, via the 'filter' argument")
         abort(400)
     else:
         co_args['filter'] = filt
@@ -172,6 +184,8 @@ def parse_cutout_args (args):
     if (not sizeStr):
         sizeStr = args.get("sizeDeg")
     if (not sizeStr):
+        current_app.logger.error(
+            "A cutout size in degrees must be specified, via a 'size' or 'sizeDeg' argument")
         abort(400)
     sizeDeg = float(sizeStr)
     co_args['sizeDeg'] = sizeDeg
