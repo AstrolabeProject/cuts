@@ -134,8 +134,8 @@ def make_ac_cutout_filename (imagePath, co_args):
     baseName = os.path.splitext(os.path.basename(imagePath))[0]
     ra = co_args['ra']
     dec = co_args['dec']
-    size = co_args['sizeDeg']
-    return "{0}_{1}_{2}_{3}x{4}_astrocut.fits".format(baseName, ra, dec, size, size)
+    size = co_args['size']
+    return "{0}_{1}_{2}_{3}_astrocut.fits".format(baseName, ra, dec, size)
 
 # Return a filename for the Astropy cutout from info in the given parameters
 def make_cutout_filename (imagePath, cutout, co_args):
@@ -180,24 +180,27 @@ def parse_cutout_args (args):
     else:
         co_args['filter'] = filt
 
-    sizeStr = args.get("size")
-    if (not sizeStr):
-        sizeStr = args.get("sizeDeg")
-    if (not sizeStr):
-        current_app.logger.error(
-            "A cutout size in degrees must be specified, via a 'size' or 'sizeDeg' argument")
-        abort(400)
-    sizeDeg = float(sizeStr)
-    co_args['sizeDeg'] = sizeDeg
-    co_args['co_size'] = u.Quantity(sizeDeg, u.degree) # make scalar Quantity
-
+    # read and parse a size specification in arc minutes or degrees
     sizeArcMinStr = args.get("sizeArcMin")
-    if (sizeArcMinStr):
-        co_args['sizeArcMin'] = float(sizeArcMinStr)
-
+    sizeDegStr = args.get("sizeDeg")
     sizeArcSecStr = args.get("sizeArcSec")
-    if (sizeArcSecStr):
-        co_args['sizeArcSec'] = float(sizeArcSecStr)
+
+    if (sizeArcMinStr):                     # prefer units in arc minutes
+        co_args['units'] = u.arcmin
+        co_args['size'] = float(sizeArcMinStr)
+    elif (sizeDegStr):                      # alternatively in degrees
+        co_args['units'] = u.deg
+        co_args['size'] = float(sizeDegStr)
+    elif (sizeArcSecStr):                   # or in arc seconds
+        co_args['units'] = u.arcsec
+        co_args['size'] = float(sizeArcSecStr)
+    else:
+        current_app.logger.error(
+            "A cutout size in arc minutes or degrees must be specified, via a 'sizeArcMin' or 'sizeDeg' argument")
+        abort(400)
+
+    # make a scalar Quantity from the size and units
+    co_args['co_size'] = u.Quantity(co_args['size'], co_args['units'])
 
     return co_args                          # return parsed, converted cutout arguments
 
