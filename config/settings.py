@@ -1,4 +1,5 @@
 # never, ever use DEBUG in production
+FLASK_DEBUG = True
 DEBUG = True
 
 LOG_LEVEL = 'INFO'  # CRITICAL / ERROR / WARNING / INFO / DEBUG
@@ -9,6 +10,7 @@ SECRET_KEY = 'insecurekeyfordevel'
 CUTOUTS_DIR = '/vos/cutouts'
 CUTOUTS_LIB = 'astropy'
 CUTOUTS_MODE = 'trim'
+FITS_MIME_TYPE = 'image/fits'
 IMAGES_DIR = '/vos/images'
 IMAGE_EXTS = [ 'fits', 'fits.gz' ]
 
