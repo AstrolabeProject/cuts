@@ -1,9 +1,10 @@
 import os
 
-from flask import abort, current_app, jsonify, request, send_file, send_from_directory
+from flask import current_app, jsonify, request, send_file, send_from_directory
 
 from cuts.app import create_celery_app
-from config.settings import CUTOUTS_DIR, CUTOUTS_MODE, IMAGES_DIR, IMAGE_EXTS
+from config.settings import CUTOUTS_DIR, CUTOUTS_MODE, FITS_MIME_TYPE, IMAGES_DIR, IMAGE_EXTS
+from cuts.blueprints.img import exceptions
 
 from astrocut import fits_cut
 
@@ -18,9 +19,8 @@ from astropy.wcs import WCS
 # Instantiate the Celery client appication
 celery = create_celery_app()
 
-FITS_MIME_TYPE = "image/fits"
 
-
+#
 # Full image methods
 #
 
@@ -36,10 +36,12 @@ def fetch_image (name):
     if (os.path.exists(filename) and os.path.isfile(filename)):
         return send_from_directory(IMAGES_DIR, name, mimetype=FITS_MIME_TYPE,
                                    as_attachment=True, attachment_filename=name)
-    current_app.logger.error("Images file {0} not found in images directory {1}".format(name, IMAGES_DIR))
-    abort(404)
+    errMsg = "Images file {0} not found in images directory {1}".format(name, IMAGES_DIR)
+    current_app.logger.error(errMsg)
+    raise exceptions.ImageNotFound(errMsg)
 
 
+#
 # Image cutout methods
 #
 
@@ -55,8 +57,9 @@ def fetch_cutout (name):
     if (os.path.exists(filename) and os.path.isfile(filename)):
         return send_from_directory(CUTOUTS_DIR, name, mimetype=FITS_MIME_TYPE,
                                    as_attachment=True, attachment_filename=name)
-    current_app.logger.error("Cutout file {0} not found in cutouts directory {1}".format(name, CUTOUTS_DIR))
-    abort(404)
+    errMsg = "Cutout file {0} not found in cutouts directory {1}".format(name, CUTOUTS_DIR)
+    current_app.logger.error(errMsg)
+    raise exceptions.ImageNotFound(errMsg)
 
 
 @celery.task()
@@ -67,9 +70,9 @@ def get_astrocut_cutout (args):
     imagePath = find_image(co_args)
     if (not imagePath):
         filt = co_args.get('filter')
-        current_app.logger.error(
-            "An image was not found for filter {0} in images directory {1}".format(filt, IMAGES_DIR))
-        abort(404)
+        errMsg = "An image was not found for filter {0} in images directory {1}".format(filt, IMAGES_DIR)
+        current_app.logger.error(errMsg)
+        raise exceptions.RequestException(errMsg)
 
     # cutouts should be written to the cutouts directory but fails due to an Astrocut bug
     co_files = fits_cut([imagePath], co_args['center'], co_args['co_size'],
@@ -90,9 +93,9 @@ def get_astropy_cutout (args):
     imagePath = find_image(co_args)
     if (not imagePath):
         filt = co_args.get('filter')
-        current_app.logger.error(
-            "An image was not found for filter {0} in images directory {1}".format(filt, IMAGES_DIR))
-        abort(404)
+        errMsg = "An image was not found for filter {0} in images directory {1}".format(filt, IMAGES_DIR)
+        current_app.logger.error(errMsg)
+        raise exceptions.RequestException(errMsg)
 
     hdu = fits.open(imagePath)[0]
     wcs = WCS(hdu.header)
@@ -102,9 +105,10 @@ def get_astropy_cutout (args):
         cutout = Cutout2D(hdu.data, position=co_args['center'], size=co_args['co_size'],
                           wcs=wcs, mode=CUTOUTS_MODE)
     except (NoOverlapError, PartialOverlapError):
-        current_app.logger.error(
-            "There is no overlap between the reference image and the given center coordinate: {0}".format(co_args['center']))
-        abort(400)
+        sky = co_args['center']
+        errMsg = "There is no overlap between the reference image and the given center coordinate: {0}, {1} {2} ({3})".format(sky.ra.value, sky.dec.value, sky.ra.unit.name, sky.frame.name)
+        current_app.logger.error(errMsg)
+        raise exceptions.RequestException(errMsg)
 
     # save cutout image in the FITS HDU and update FITS header with cutout WCS
     hdu.data = cutout.data
@@ -157,16 +161,18 @@ def parse_cutout_args (args):
 
     raStr = args.get("ra")
     if (not raStr):
-        current_app.logger.error("Right ascension must be specified, via the 'ra' argument")
-        abort(400)
+        errMsg = "Right ascension must be specified, via the 'ra' argument"
+        current_app.logger.error(errMsg)
+        raise exceptions.RequestException(errMsg)
     else:
         ra = float(raStr)
         co_args['ra'] = ra
 
     decStr = args.get("dec")
     if (not decStr):
-        current_app.logger.error("Declination must be specified, via the 'dec' argument")
-        abort(400)
+        errMsg = "Declination must be specified, via the 'dec' argument"
+        current_app.logger.error(errMsg)
+        raise exceptions.RequestException(errMsg)
     else:
         dec = float(decStr)
         co_args['dec'] = dec
@@ -175,8 +181,9 @@ def parse_cutout_args (args):
 
     filt = args.get("filter")
     if (not filt):
-        current_app.logger.error("An image filter must be specified, via the 'filter' argument")
-        abort(400)
+        errMsg = "An image filter must be specified, via the 'filter' argument"
+        current_app.logger.error(errMsg)
+        raise exceptions.RequestException(errMsg)
     else:
         co_args['filter'] = filt
 
@@ -195,9 +202,9 @@ def parse_cutout_args (args):
         co_args['units'] = u.arcsec
         co_args['size'] = float(sizeArcSecStr)
     else:
-        current_app.logger.error(
-            "A cutout size in arc minutes or degrees must be specified, via a 'sizeArcMin' or 'sizeDeg' argument")
-        abort(400)
+        errMsg = "A cutout size in arc minutes or degrees must be specified, via a 'sizeArcMin' or 'sizeDeg' argument"
+        current_app.logger.error(errMsg)
+        raise exceptions.RequestException(errMsg)
 
     # make a scalar Quantity from the size and units
     co_args['co_size'] = u.Quantity(co_args['size'], co_args['units'])

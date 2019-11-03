@@ -1,7 +1,10 @@
 from flask import Blueprint, jsonify, request
 # from flask_cors import CORS
 from config.settings import CUTOUTS_LIB
+from cuts.blueprints.img import exceptions
 
+
+# Instantiate the image blueprint
 img = Blueprint('img', __name__, template_folder='templates')
 
 
@@ -72,3 +75,20 @@ def co_ac ():
 @img.route('/echo')
 def echo ():
     return jsonify(request.args)
+
+
+#
+# Image blueprint error handlers
+#
+
+@img.errorhandler(exceptions.RequestException)
+def handle_request_exception(exception):
+    return exception.to_tuple()
+
+@img.errorhandler(exceptions.ImageNotFound)
+def handle_image_not_found(exception):
+    return exception.to_tuple()
+
+@img.errorhandler(exceptions.ServerException)
+def handle_server_exception(exception):
+    return exception.to_tuple()
