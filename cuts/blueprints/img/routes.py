@@ -46,17 +46,6 @@ def co_fetch (name):
     return fetch_cutout(name)
 
 
-# Use configuration to decide which cutout library to use
-@img.route('/img/co/cut')
-def co_cut ():
-    # required to avoid circular imports
-    from cuts.blueprints.img.tasks import get_astrocut_cutout
-    from cuts.blueprints.img.tasks import get_astropy_cutout
-    if (CUTOUTS_LIB and CUTOUTS_LIB == 'astrocut'):
-        return get_astrocut_cutout(request.args)
-    else:
-        return get_astropy_cutout(request.args)
-
 # Use Astropy Cutout2D to produce and return a cutout
 @img.route('/img/co/2d')
 def co_2d ():
@@ -64,12 +53,31 @@ def co_2d ():
     from cuts.blueprints.img.tasks import get_astropy_cutout
     return get_astropy_cutout(request.args)
 
-# Use Astrocut to produce and return a cutout
-@img.route('/img/co/ac')
-def co_ac ():
+# Make and return cutout using Astropy Cutout2D
+@img.route('/img/co/cut')
+def co_cut ():
     # required to avoid circular imports
-    from cuts.blueprints.img.tasks import get_astrocut_cutout
-    return get_astrocut_cutout(request.args)
+    from cuts.blueprints.img.tasks import get_astropy_cutout
+    return get_astropy_cutout(request.args)
+
+
+# # Use configuration to decide which cutout library to use
+# @img.route('/img/co/cut')
+# def co_cut ():
+#     # required to avoid circular imports
+#     from cuts.blueprints.img.tasks import get_astrocut_cutout
+#     from cuts.blueprints.img.tasks import get_astropy_cutout
+#     if (CUTOUTS_LIB and CUTOUTS_LIB == 'astrocut'):
+#         return get_astrocut_cutout(request.args)
+#     else:
+#         return get_astropy_cutout(request.args)
+
+# # Use Astrocut to produce and return a cutout
+# @img.route('/img/co/ac')
+# def co_ac ():
+#     # required to avoid circular imports
+#     from cuts.blueprints.img.tasks import get_astrocut_cutout
+#     return get_astrocut_cutout(request.args)
 
 
 @img.route('/echo')

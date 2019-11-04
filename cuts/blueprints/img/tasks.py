@@ -6,7 +6,7 @@ from cuts.app import create_celery_app
 from config.settings import CUTOUTS_DIR, CUTOUTS_MODE, FITS_MIME_TYPE, IMAGES_DIR, IMAGE_EXTS
 from cuts.blueprints.img import exceptions
 
-from astrocut import fits_cut
+# from astrocut import fits_cut
 
 from astropy import units as u
 from astropy.io import fits
@@ -62,26 +62,26 @@ def fetch_cutout (name):
     raise exceptions.ImageNotFound(errMsg)
 
 
-@celery.task()
-def get_astrocut_cutout (args):
-    co_args = parse_cutout_args(args)
+# @celery.task()
+# def get_astrocut_cutout (args):
+#     co_args = parse_cutout_args(args)
 
-    # figure out which image to make cutout from
-    imagePath = find_image(co_args)
-    if (not imagePath):
-        filt = co_args.get('filter')
-        errMsg = "An image was not found for filter {0} in images directory {1}".format(filt, IMAGES_DIR)
-        current_app.logger.error(errMsg)
-        raise exceptions.RequestException(errMsg)
+#     # figure out which image to make cutout from
+#     imagePath = find_image(co_args)
+#     if (not imagePath):
+#         filt = co_args.get('filter')
+#         errMsg = "An image was not found for filter {0} in images directory {1}".format(filt, IMAGES_DIR)
+#         current_app.logger.error(errMsg)
+#         raise exceptions.RequestException(errMsg)
 
-    # cutouts should be written to the cutouts directory but fails due to an Astrocut bug
-    co_files = fits_cut([imagePath], co_args['center'], co_args['co_size'],
-                        single_outfile=False, output_dir=CUTOUTS_DIR)
+#     # cutouts should be written to the cutouts directory but fails due to an Astrocut bug
+#     co_files = fits_cut([imagePath], co_args['center'], co_args['co_size'],
+#                         single_outfile=False, output_dir=CUTOUTS_DIR)
 
-    # create a return filename and return file
-    co_filename = make_ac_cutout_filename(co_files[0], co_args)
-    return send_file(co_files[0], mimetype=FITS_MIME_TYPE,
-                     as_attachment=True, attachment_filename=co_filename)
+#     # create a return filename and return file
+#     co_filename = make_ac_cutout_filename(co_files[0], co_args)
+#     return send_file(co_files[0], mimetype=FITS_MIME_TYPE,
+#                      as_attachment=True, attachment_filename=co_filename)
 
 
 
@@ -133,13 +133,14 @@ def list_fits_files (imageDir=IMAGES_DIR, extents=IMAGE_EXTS):
     return [ fyl for fyl in os.listdir(imageDir) if (fyl.endswith(tuple(extents))) ]
 
 
-# Return a filename for the Astrocut cutout from info in the given parameters
-def make_ac_cutout_filename (imagePath, co_args):
-    baseName = os.path.splitext(os.path.basename(imagePath))[0]
-    ra = co_args['ra']
-    dec = co_args['dec']
-    size = co_args['size']
-    return "{0}_{1}_{2}_{3}_astrocut.fits".format(baseName, ra, dec, size)
+# # Return a filename for the Astrocut cutout from info in the given parameters
+# def make_ac_cutout_filename (imagePath, co_args):
+#     baseName = os.path.splitext(os.path.basename(imagePath))[0]
+#     ra = co_args['ra']
+#     dec = co_args['dec']
+#     size = co_args['size']
+#     return "{0}_{1}_{2}_{3}_astrocut.fits".format(baseName, ra, dec, size)
+
 
 # Return a filename for the Astropy cutout from info in the given parameters
 def make_cutout_filename (imagePath, cutout, co_args):
@@ -148,6 +149,7 @@ def make_cutout_filename (imagePath, cutout, co_args):
     dec = co_args['dec']
     shape = cutout.shape
     return "{0}__{1}_{2}_{3}x{4}.fits".format(baseName, ra, dec, shape[0], shape[1])
+
 
 # Return a filepath for the given filename in the cutout cache area
 def make_cutout_filepath (filename, cutout_dir=CUTOUTS_DIR):
