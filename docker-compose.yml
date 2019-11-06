@@ -4,8 +4,11 @@ services:
   redis:
     image: redis:5.0-alpine
     command: redis-server --requirepass devpassword
+    deploy:
+      restart_policy:
+        condition: none
     volumes:
-      - redis:/var/lib/redis/data
+      - redis:/data
     ports:
       - '6379:6379'
 
@@ -35,7 +38,7 @@ services:
 
 networks:
   default:
-    name: cuts_net
+    name: vos_net
     attachable: true
 
 volumes:
