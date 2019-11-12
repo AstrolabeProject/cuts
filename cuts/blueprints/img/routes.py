@@ -19,12 +19,12 @@ def img_list ():
     from cuts.blueprints.img.tasks import list_images
     return list_images()
 
-# fetch a specific image by full name
-@img.route('/img/<name>', methods=['GET'])
-def img_fetch (name):
+# fetch a specific image by filename
+@img.route('/img/<filename>', methods=['GET'])
+def img_fetch (filename):
     # required to avoid circular imports
     from cuts.blueprints.img.tasks import fetch_image
-    return fetch_image(name)
+    return fetch_image(filename)
 
 
 #
@@ -38,12 +38,12 @@ def co_list ():
     from cuts.blueprints.img.tasks import list_cutouts
     return list_cutouts()
 
-# fetch a specific cutout by full name
-@img.route('/img/co/<name>', methods=['GET'])
-def co_fetch (name):
+# fetch a specific cutout by filename
+@img.route('/img/co/<filename>', methods=['GET'])
+def co_fetch (filename):
     # required to avoid circular imports
     from cuts.blueprints.img.tasks import fetch_cutout
-    return fetch_cutout(name)
+    return fetch_cutout(filename)
 
 
 # Use Astropy Cutout2D to produce and return a cutout
