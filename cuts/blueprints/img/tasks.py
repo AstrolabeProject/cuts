@@ -35,6 +35,14 @@ def fetch_image (filename):
     return return_image(filename)
 
 
+@celery.task()
+def image_corners (filename):
+    img_path = make_filepath_from_filename(filename)
+    wcs = WCS(fits.getheader(img_path))
+    return jsonify(wcs.calc_footprint().tolist())
+
+
+
 #
 # Image cutout methods
 #

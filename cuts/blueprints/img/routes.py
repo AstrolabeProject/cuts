@@ -26,6 +26,13 @@ def img_fetch (filename):
     from cuts.blueprints.img.tasks import fetch_image
     return fetch_image(filename)
 
+# fetch a specific image by filename
+@img.route('/img/corners/<filename>', methods=['GET'])
+def img_corners (filename):
+    # required to avoid circular imports
+    from cuts.blueprints.img.tasks import image_corners
+    return image_corners(filename)
+
 
 #
 # Image cutout methods
