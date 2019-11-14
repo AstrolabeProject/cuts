@@ -26,7 +26,14 @@ def img_fetch (filename):
     from cuts.blueprints.img.tasks import fetch_image
     return fetch_image(filename)
 
-# fetch a specific image by filename
+# tell whether the specified image contains the specified coordinate
+@img.route('/img/contains/<filename>', methods=['GET'])
+def img_contains (filename):
+    # required to avoid circular imports
+    from cuts.blueprints.img.tasks import image_contains
+    return image_contains(filename, request.args)
+
+# return the corner coordinates of the specified image
 @img.route('/img/corners/<filename>', methods=['GET'])
 def img_corners (filename):
     # required to avoid circular imports
@@ -60,7 +67,7 @@ def co_2d ():
     from cuts.blueprints.img.tasks import get_astropy_cutout
     return get_astropy_cutout(request.args)
 
-# Make and return cutout using Astropy Cutout2D
+# Make and return an image cutout using Astropy Cutout2D
 @img.route('/img/co/cut')
 def co_cut ():
     # required to avoid circular imports

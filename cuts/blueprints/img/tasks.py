@@ -14,6 +14,7 @@ from astropy.coordinates import SkyCoord
 from astropy.nddata import Cutout2D
 from astropy.nddata.utils import NoOverlapError, PartialOverlapError
 from astropy.wcs import WCS
+from regions import PolygonSkyRegion
 
 
 # Instantiate the Celery client appication
@@ -24,17 +25,33 @@ celery = create_celery_app()
 # Full image methods
 #
 
+# list all FITS images found in the image directory
 @celery.task()
 def list_images ():
     image_files = list_fits_files()
     return jsonify(image_files)
 
 
+# fetch a specific image by filename
 @celery.task()
 def fetch_image (filename):
     return return_image(filename)
 
 
+# tell whether the specified image contains the specified coordinate or not
+@celery.task()
+def image_contains (filename, args):
+    coords = parse_coordinate_args(args)
+    img_path = make_filepath_from_filename(filename)
+    wcs = WCS(fits.getheader(img_path))
+    corners = SkyCoord(wcs.calc_footprint(), unit='deg')
+    polygon_sky = PolygonSkyRegion(vertices = corners)
+    loc = SkyCoord(coords['ra'], coords['dec'], unit='deg')
+    contained = polygon_sky.contains(loc, wcs)
+    return jsonify(contained.tolist()[0])
+
+
+# return the corner coordinates of the specified image
 @celery.task()
 def image_corners (filename):
     img_path = make_filepath_from_filename(filename)
@@ -47,12 +64,14 @@ def image_corners (filename):
 # Image cutout methods
 #
 
+# list all existing cutouts in the cache directory
 @celery.task()
 def list_cutouts ():
     image_files = list_fits_files(imageDir=CUTOUTS_DIR)
     return jsonify(image_files)
 
 
+# fetch a specific cutout by filename
 @celery.task()
 def fetch_cutout (filename):
     return return_image(filename, imageDir=CUTOUTS_DIR)
@@ -81,6 +100,7 @@ def fetch_cutout (filename):
 
 
 
+# Make and return an imaget cutout using Astropy Cutout2D
 @celery.task()
 def get_astropy_cutout (args):
     # parse the parameters for the cutout
@@ -156,10 +176,10 @@ def make_cutout_filename (imagePath, cutout, co_args):
     return "{0}__{1}_{2}_{3}x{4}.fits".format(baseName, ra, dec, shape[0], shape[1])
 
 
-# Parse, convert, and check the given arguments, returning a dictionary of cutout arguments.
-# Any arguments needed by cutout routines should be passed through to the return dictionary.
-def parse_cutout_args (args):
-    co_args = parse_cutout_size(args)       # begin by getting cutout size parameters
+# Parse, convert, and check the given coordinate arguments, returning a dictionary of
+# coordinate arguments.
+def parse_coordinate_args (args):
+    co_args = {}
 
     raStr = args.get("ra")
     if (not raStr):
@@ -180,6 +200,16 @@ def parse_cutout_args (args):
         co_args['dec'] = dec
 
     co_args['center'] = SkyCoord(ra=ra*u.degree, dec=dec*u.degree, frame='icrs')
+
+    return co_args                          # return parsed, converted cutout arguments
+
+
+# Parse, convert, and check the given arguments, returning a dictionary of cutout arguments.
+# Any arguments needed by cutout routines should be passed through to the return dictionary.
+def parse_cutout_args (args):
+    co_args = parse_cutout_size(args)       # begin by getting cutout size parameters
+
+    co_args.update(parse_coordinate_args(args)) # add coordinate parameters
 
     filt = args.get("filter")
     if (not filt):
