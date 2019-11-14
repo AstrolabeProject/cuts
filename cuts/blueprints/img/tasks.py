@@ -42,7 +42,7 @@ def fetch_image (filename):
 @celery.task()
 def image_contains (filename, args):
     coords = parse_coordinate_args(args)
-    img_path = make_filepath_from_filename(filename)
+    img_path = image_filepath_from_filename(filename)
     wcs = WCS(fits.getheader(img_path))
     corners = SkyCoord(wcs.calc_footprint(), unit='deg')
     polygon_sky = PolygonSkyRegion(vertices = corners)
@@ -54,7 +54,7 @@ def image_contains (filename, args):
 # return the corner coordinates of the specified image
 @celery.task()
 def image_corners (filename):
-    img_path = make_filepath_from_filename(filename)
+    img_path = image_filepath_from_filename(filename)
     wcs = WCS(fits.getheader(img_path))
     return jsonify(wcs.calc_footprint().tolist())
 
@@ -117,7 +117,7 @@ def get_astropy_cutout (args):
     if (not co_args.get('co_size')):        # if no size specified, return the entire image
         return return_image(img_filename)   # exit out now, returning entire image
 
-    img_path = make_filepath_from_filename(img_filename)
+    img_path = image_filepath_from_filename(img_filename)
     hdu = fits.open(img_path)[0]
     wcs = WCS(hdu.header)
 
@@ -148,7 +148,7 @@ def get_astropy_cutout (args):
 #
 
 # Return a filepath for the given filename in the cutout cache area
-def make_filepath_from_filename (filename, imageDir=IMAGES_DIR):
+def image_filepath_from_filename (filename, imageDir=IMAGES_DIR):
     return os.path.join(imageDir, filename)
 
 
@@ -257,7 +257,7 @@ def parse_cutout_size (args):
 # Send the specified image file, from the specified directory,
 # back to the caller, giving it the specified MIME type.
 def return_image (filename, imageDir=IMAGES_DIR, mimetype=FITS_MIME_TYPE):
-    filepath = make_filepath_from_filename(filename, imageDir=imageDir)
+    filepath = image_filepath_from_filename(filename, imageDir=imageDir)
     if (os.path.exists(filepath) and os.path.isfile(filepath)):
         return send_from_directory(imageDir, filename, mimetype=mimetype,
                                    as_attachment=True, attachment_filename=filename)
@@ -268,7 +268,7 @@ def return_image (filename, imageDir=IMAGES_DIR, mimetype=FITS_MIME_TYPE):
 
 # Write the contents of the given HDU to the specified file in the cutouts directory.
 def write_cutout (hdu, co_filename, imageDir=CUTOUTS_DIR, overwrite=True):
-    co_filepath = make_filepath_from_filename(co_filename, imageDir=imageDir)
+    co_filepath = image_filepath_from_filename(co_filename, imageDir=imageDir)
     hdu.writeto(co_filepath, overwrite=True)
 
 
