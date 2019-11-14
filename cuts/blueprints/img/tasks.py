@@ -48,7 +48,7 @@ def image_contains (filename, args):
     polygon_sky = PolygonSkyRegion(vertices = corners)
     loc = SkyCoord(coords['ra'], coords['dec'], unit='deg')
     contained = polygon_sky.contains(loc, wcs)
-    return jsonify(contained.tolist()[0])
+    return jsonify(contained.tolist())
 
 
 # return the corner coordinates of the specified image
