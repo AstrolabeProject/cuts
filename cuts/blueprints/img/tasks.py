@@ -5,6 +5,7 @@ from flask import current_app, jsonify, request, send_file, send_from_directory
 from cuts.app import create_celery_app
 from config.settings import CUTOUTS_DIR, CUTOUTS_MODE, FITS_MIME_TYPE, IMAGES_DIR, IMAGE_EXTS
 from cuts.blueprints.img import exceptions
+import cuts.blueprints.img.image_manager as imgr
 
 # from astrocut import fits_cut
 
@@ -14,7 +15,6 @@ from astropy.coordinates import SkyCoord
 from astropy.nddata import Cutout2D
 from astropy.nddata.utils import NoOverlapError, PartialOverlapError
 from astropy.wcs import WCS
-from regions import PolygonSkyRegion
 
 
 # Instantiate the Celery client appication
@@ -25,39 +25,30 @@ celery = create_celery_app()
 # Full image methods
 #
 
-# list all FITS images found in the image directory
+# List all FITS images found in the image directory.
 @celery.task()
 def list_images ():
-    image_files = list_fits_files()
+    image_files = imgr.list_fits_files()
     return jsonify(image_files)
 
 
-# fetch a specific image by filename
+# Fetch a specific image by filename.
 @celery.task()
 def fetch_image (filename):
     return return_image(filename)
 
 
-# tell whether the specified image contains the specified coordinate or not
+# Tell whether the specified image contains the specified coordinate or not.
 @celery.task()
 def image_contains (filename, args):
     coords = parse_coordinate_args(args)
-    img_path = image_filepath_from_filename(filename)
-    wcs = WCS(fits.getheader(img_path))
-    corners = SkyCoord(wcs.calc_footprint(), unit='deg')
-    polygon_sky = PolygonSkyRegion(vertices = corners)
-    loc = SkyCoord(coords['ra'], coords['dec'], unit='deg')
-    contained = polygon_sky.contains(loc, wcs)
-    return jsonify(contained.tolist())
+    return imgr.image_contains(filename, coords)
 
 
 # return the corner coordinates of the specified image
 @celery.task()
 def image_corners (filename):
-    img_path = image_filepath_from_filename(filename)
-    wcs = WCS(fits.getheader(img_path))
-    return jsonify(wcs.calc_footprint().tolist())
-
+    return imgr.image_corners(filename)
 
 
 #
@@ -67,7 +58,7 @@ def image_corners (filename):
 # list all existing cutouts in the cache directory
 @celery.task()
 def list_cutouts ():
-    image_files = list_fits_files(imageDir=CUTOUTS_DIR)
+    image_files = imgr.list_fits_files(imageDir=CUTOUTS_DIR)
     return jsonify(image_files)
 
 
@@ -82,7 +73,7 @@ def fetch_cutout (filename):
 #     co_args = parse_cutout_args(args)
 
 #     # figure out which image to make cutout from
-#     imagePath = find_image(co_args)
+#     imagePath = imgr.find_image(co_args)
 #     if (not imagePath):
 #         filt = co_args.get('filter')
 #         errMsg = "An image was not found for filter {0} in images directory {1}".format(filt, IMAGES_DIR)
@@ -107,7 +98,7 @@ def get_astropy_cutout (args):
     co_args = parse_cutout_args(args)
 
     # figure out which image to make a cutout from based on the cutout parameters
-    img_filename = find_image_filename(co_args)
+    img_filename = imgr.find_image_filename(co_args)
     if (not img_filename):
         filt = co_args.get('filter')
         errMsg = "An image was not found for filter {0} in images directory {1}".format(filt, IMAGES_DIR)
@@ -117,7 +108,7 @@ def get_astropy_cutout (args):
     if (not co_args.get('co_size')):        # if no size specified, return the entire image
         return return_image(img_filename)   # exit out now, returning entire image
 
-    img_path = image_filepath_from_filename(img_filename)
+    img_path = imgr.image_filepath_from_filename(img_filename)
     hdu = fits.open(img_path)[0]
     wcs = WCS(hdu.header)
 
@@ -146,17 +137,6 @@ def get_astropy_cutout (args):
 #
 # Internal helper methods
 #
-
-# Return a filepath for the given filename in the cutout cache area
-def image_filepath_from_filename (filename, imageDir=IMAGES_DIR):
-    return os.path.join(imageDir, filename)
-
-
-# Return a list of filenames for FITS files in the given directory.
-# FITS files are identified by the given list of valid file extensions.
-def list_fits_files (imageDir=IMAGES_DIR, extents=IMAGE_EXTS):
-    return [ fyl for fyl in os.listdir(imageDir) if (fyl.endswith(tuple(extents))) ]
-
 
 # # Return a filename for the Astrocut cutout from info in the given parameters
 # def make_ac_cutout_filename (imagePath, co_args):
@@ -257,8 +237,7 @@ def parse_cutout_size (args):
 # Send the specified image file, from the specified directory,
 # back to the caller, giving it the specified MIME type.
 def return_image (filename, imageDir=IMAGES_DIR, mimetype=FITS_MIME_TYPE):
-    filepath = image_filepath_from_filename(filename, imageDir=imageDir)
-    if (os.path.exists(filepath) and os.path.isfile(filepath)):
+    if (imgr.is_fits_file(filename, imageDir)):
         return send_from_directory(imageDir, filename, mimetype=mimetype,
                                    as_attachment=True, attachment_filename=filename)
     errMsg = "Specified image file {0} not found in directory {1}".format(filename, imageDir)
@@ -268,31 +247,5 @@ def return_image (filename, imageDir=IMAGES_DIR, mimetype=FITS_MIME_TYPE):
 
 # Write the contents of the given HDU to the specified file in the cutouts directory.
 def write_cutout (hdu, co_filename, imageDir=CUTOUTS_DIR, overwrite=True):
-    co_filepath = image_filepath_from_filename(co_filename, imageDir=imageDir)
+    co_filepath = imgr.image_filepath_from_filename(co_filename, imageDir=imageDir)
     hdu.writeto(co_filepath, overwrite=True)
-
-
-#
-# Temporary methods
-#
-
-# return filename of an image from the specified image directory selected by the given cutout args
-def find_image_filename (co_args, imageDir=IMAGES_DIR):
-    fyls = {
-        "F090W": "goods_s_F090W_2018_08_29.fits",
-        "F115W": "goods_s_F115W_2018_08_29.fits",
-        "F150W": "goods_s_F150W_2018_08_29.fits",
-        "F200W": "goods_s_F200W_2018_08_29.fits",
-        "F277W": "goods_s_F277W_2018_08_29.fits",
-        "F335M": "goods_s_F335M_2018_08_29.fits",
-        "F356W": "goods_s_F356W_2018_08_30.fits",
-        "F410M": "goods_s_F410M_2018_08_30.fits",
-        "F444W": "goods_s_F444W_2018_08_31.fits"
-    }
-
-    # currently, selecting one image based on filter type
-    selected = fyls.get(co_args.get('filter'))
-    if (not selected):
-        return None
-    else:
-        return selected

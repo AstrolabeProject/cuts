@@ -54,6 +54,9 @@ def create_app(settings_override=None):
     app.register_blueprint(pages)
     extensions(app)
 
+    from cuts.blueprints.img.image_manager import initialize_cache
+    app.before_first_request(initialize_cache)
+
     return app
 
 
