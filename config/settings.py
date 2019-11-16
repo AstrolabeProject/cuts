@@ -8,7 +8,6 @@ SECRET_KEY = 'insecurekeyfordevel'
 
 # Image service
 CUTOUTS_DIR = '/vos/cutouts'
-CUTOUTS_LIB = 'astropy'
 CUTOUTS_MODE = 'trim'
 FITS_MIME_TYPE = 'image/fits'
 IMAGES_DIR = '/vos/images'

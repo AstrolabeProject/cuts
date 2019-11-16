@@ -7,8 +7,6 @@ from config.settings import CUTOUTS_DIR, CUTOUTS_MODE, FITS_MIME_TYPE, IMAGES_DI
 from cuts.blueprints.img import exceptions
 import cuts.blueprints.img.image_manager as imgr
 
-# from astrocut import fits_cut
-
 from astropy import units as u
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
@@ -70,29 +68,6 @@ def fetch_cutout (filename):
     return return_image(filename, imageDir=CUTOUTS_DIR)
 
 
-# @celery.task()
-# def get_astrocut_cutout (args):
-#     co_args = parse_cutout_args(args)
-
-#     # figure out which image to make cutout from
-#     imagePath = imgr.find_image(co_args)
-#     if (not imagePath):
-#         filt = co_args.get('filter')
-#         errMsg = "An image was not found for filter {0} in images directory {1}".format(filt, IMAGES_DIR)
-#         current_app.logger.error(errMsg)
-#         raise exceptions.RequestException(errMsg)
-
-#     # cutouts should be written to the cutouts directory but fails due to an Astrocut bug
-#     co_files = fits_cut([imagePath], co_args['center'], co_args['co_size'],
-#                         single_outfile=False, output_dir=CUTOUTS_DIR)
-
-#     # create a return filename and return file
-#     co_filename = make_ac_cutout_filename(co_files[0], co_args)
-#     return send_file(co_files[0], mimetype=FITS_MIME_TYPE,
-#                      as_attachment=True, attachment_filename=co_filename)
-
-
-
 # Make and return an imaget cutout using Astropy Cutout2D
 @celery.task()
 def get_astropy_cutout (args):
@@ -139,15 +114,6 @@ def get_astropy_cutout (args):
 #
 # Internal helper methods
 #
-
-# # Return a filename for the Astrocut cutout from info in the given parameters
-# def make_ac_cutout_filename (imagePath, co_args):
-#     baseName = os.path.splitext(os.path.basename(imagePath))[0]
-#     ra = co_args['ra']
-#     dec = co_args['dec']
-#     size = co_args['size']
-#     return "{0}_{1}_{2}_{3}_astrocut.fits".format(baseName, ra, dec, size)
-
 
 # Return a filename for the Astropy cutout from info in the given parameters
 def make_cutout_filename (imagePath, cutout, co_args):
