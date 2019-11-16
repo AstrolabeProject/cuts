@@ -42,13 +42,15 @@ def fetch_image (filename):
 @celery.task()
 def image_contains (filename, args):
     coords = parse_coordinate_args(args)
-    return imgr.image_contains(filename, coords)
+    res = imgr.image_contains(filename, coords)
+    current_app.logger.error("(image_contains): type(res){}".format(type(res)))
+    return jsonify([imgr.image_contains(filename, coords)])
 
 
 # return the corner coordinates of the specified image
 @celery.task()
 def image_corners (filename):
-    return imgr.image_corners(filename)
+    return jsonify(imgr.image_corners(filename))
 
 
 #

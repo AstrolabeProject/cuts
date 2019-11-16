@@ -1,6 +1,6 @@
 import os
 
-from flask import current_app, jsonify, request
+from flask import current_app, request
 
 from config.settings import FITS_MIME_TYPE, IMAGES_DIR, IMAGE_EXTS
 
@@ -8,7 +8,6 @@ from astropy import units as u
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
-from regions import PolygonSkyRegion
 
 # The metadata cache
 IMAGE_MD_CACHE = {}
@@ -47,16 +46,10 @@ def refresh_cache ():
 # Assumes that the given file path points to a valid, readable FITS file!
 def extract_metadata (filepath):
     timestamp = os.path.getmtime(filepath)
-    hdr = fits.getheader(filepath)
-    wcs = WCS(hdr)
+    wcs = WCS(fits.getheader(filepath))
     center_pt = wcs.wcs.crval
-    corners = wcs.calc_footprint()
-    sky_corners = SkyCoord(corners, unit='deg')
-    sky_region = PolygonSkyRegion(vertices=sky_corners)
-    return {
-        'wcs': wcs, 'center': center_pt, 'corners': corners,
-        'sky_corners': sky_corners, 'sky_region': sky_region, 'timestamp': timestamp
-    }
+    corners = wcs.calc_footprint()          # clockwise, starting w/ bottom left corner
+    return { 'wcs': wcs, 'center': center_pt, 'corners': corners }
 
 
 # Get and return the metadata for the specified file. If the metadata is not in cache,
@@ -81,12 +74,10 @@ def image_contains (filename, coords):
     position = SkyCoord(coords['ra'], coords['dec'], unit='deg')
     md = get_metadata(filename)
     if (md):
-        sky_region = md['sky_region']
         wcs = md['wcs']
-        contained = sky_region.contains(position, wcs)
-        return jsonify(contained.tolist())
+        return wcs.footprint_contains(position).tolist() # tolist converts numpy bool
     else:
-        return jsonify([False])
+        return False
 
 
 # Return a (possibly empty) list of corner coordinate pairs for the specified image.
@@ -95,7 +86,7 @@ def image_corners (filename):
     md = fetch_metadata(filename)           # get/add metadata from file
     if (md):
         corners = md['corners'].tolist()
-    return jsonify(corners)
+    return corners
 
 
 # Return a filepath for the given filename in the specified image directory.
