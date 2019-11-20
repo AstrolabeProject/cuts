@@ -25,6 +25,9 @@ services:
 
   cuts:
     image: cuts:devel
+    deploy:
+      restart_policy:
+        condition: none
     environment:
       PYTHONUNBUFFERED: 'true'
     volumes:
