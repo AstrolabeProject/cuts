@@ -16,5 +16,9 @@ celery==4.3.0
 astropy==3.2.2
 numpy==1.17.3
 
+# Testing
+pytest==5.2.4
+pytest-cov==2.8.1
+
 # Extensions
 flask-debugtoolbar==0.10.1
