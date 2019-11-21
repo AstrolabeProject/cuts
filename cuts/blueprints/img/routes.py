@@ -59,24 +59,30 @@ def co_fetch (filename):
     return fetch_cutout(filename)
 
 
-# Use Astropy Cutout2D to produce and return a cutout
-@img.route('/img/co/2d')
-def co_2d ():
+# Make and return an image cutout
+@img.route('/img/co/cutout')
+def co_cutout ():
     # required to avoid circular imports
-    from cuts.blueprints.img.tasks import get_astropy_cutout
-    return get_astropy_cutout(request.args)
+    from cuts.blueprints.img.tasks import get_cutout
+    return get_cutout(request.args)
 
-# Make and return an image cutout using Astropy Cutout2D
-@img.route('/img/co/cut')
-def co_cut ():
+# Make and return an image cutout for an image in a certain bandwidth
+@img.route('/img/co/cutout_by_filter')
+def co_cutout_by_filter ():
     # required to avoid circular imports
-    from cuts.blueprints.img.tasks import get_astropy_cutout
-    return get_astropy_cutout(request.args)
+    from cuts.blueprints.img.tasks import get_cutout_by_filter
+    return get_cutout_by_filter(request.args)
 
 
 @img.route('/echo')
 def echo ():
     return jsonify(request.args)
+
+@img.route('/admin/show_cache')
+def admin_show_cache ():
+    # required to avoid circular imports
+    from cuts.blueprints.img.tasks import show_cache
+    return show_cache(request.args)
 
 
 #
