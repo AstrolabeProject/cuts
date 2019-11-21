@@ -42,14 +42,27 @@ def refresh_cache ():
                 store_metadata(filename)    # update the cache
 
 
+# A matching function to match images with filters by cutout argument 'filter'.
+# Returns boolean if image metadata filter matches cutout argument filter.
+def by_filter_matcher (co_args, metadata):
+    co_filt = co_args.get('filter')
+    md_filt = metadata.get('filter')
+    return (co_filt and md_filt and (co_filt == md_filt))
+
+
 # Extract and return the metadata from the file at the given file path.
 # Assumes that the given file path points to a valid, readable FITS file!
 def extract_metadata (filepath):
     timestamp = os.path.getmtime(filepath)
-    wcs = WCS(fits.getheader(filepath))
+    hdr = fits.getheader(filepath)
+    filt = hdr.get('FILTER')
+    wcs = WCS(hdr)
     center_pt = wcs.wcs.crval
     corners = wcs.calc_footprint()          # clockwise, starting w/ bottom left corner
-    return { 'wcs': wcs, 'center': center_pt, 'corners': corners }
+    md = { 'timestamp': timestamp, 'wcs': wcs, 'center': center_pt, 'corners': corners }
+    if (filt):                              # if image has FILTER header
+        md['filter'] = filt.strip()         # save it as metadata
+    return md                               # return the metadata dictionary
 
 
 # Get and return the metadata for the specified file. If the metadata is not in cache,
@@ -70,14 +83,8 @@ def get_metadata (filename):
 
 # Tell whether the specified image file contains the specified coordinates or not.
 def image_contains (filename, coords):
-    imagepath = image_filepath_from_filename(filename)
     position = SkyCoord(coords['ra'], coords['dec'], unit='deg')
-    md = get_metadata(filename)
-    if (md):
-        wcs = md['wcs']
-        return wcs.footprint_contains(position).tolist() # tolist converts numpy bool
-    else:
-        return False
+    return metadata_contains(fetch_metadata(filename), position)
 
 
 # Return a (possibly empty) list of corner coordinate pairs for the specified image.
@@ -114,9 +121,45 @@ def list_fits_files (imageDir=IMAGES_DIR, extents=IMAGE_EXTS):
     return [ fyl for fyl in os.listdir(imageDir) if (fyl.endswith(tuple(extents))) ]
 
 
+# Return the filename of an image, from the specified image directory, which contains
+# the specified coordinate arguments and satisfies the (optional) given matching function.
+def match_image (co_args, imageDir=IMAGES_DIR, match_fn=None):
+    position = SkyCoord(co_args['ra'], co_args['dec'], unit='deg')
+
+    for filename in list_fits_files(imageDir=imageDir):
+        md = fetch_metadata(filename)
+        if (not md):                        # if unable to get metadata
+            continue                        # then skip this file
+
+        # if matching function and file fails to match cutout parameters, then skip this file
+        if (match_fn and (not match_fn(co_args, md))):
+            continue
+
+        # if file contains the position, then return the matching filename immediately
+        if (metadata_contains(md, position)):
+            current_app.logger.info("(match_image): MATCHED => {0}".format(filename))
+            return filename
+
+    return None                             # signal failure to find matching file
+
+
+# Use the given image metadata to tell whether the image contains the given position or not.
+# Returns True if the position is contained within the image footprint or False otherwise.
+def metadata_contains (metadata, position):
+    if (metadata):
+        wcs = metadata['wcs']
+        return wcs.footprint_contains(position).tolist() # tolist converts numpy bool
+    else:
+        return False
+
+
 # Put the given metadata into the cache, keyed by the given filename.
 def put_metadata (filename, md):
     IMAGE_MD_CACHE[filename] = md
+
+
+def show_cache ():
+    return repr(IMAGE_MD_CACHE)
 
 
 # Extract, cache, and return the metadata from the specified file in the specified directory.
@@ -133,27 +176,23 @@ def store_metadata (filename, imageDir=IMAGES_DIR):
         return None
 
 
-#
-# Temporary methods
-#
-
 # return filename of an image from the specified image directory selected by the given cutout args
-def find_image_filename (co_args, imageDir=IMAGES_DIR):
-    fyls = {
-        "F090W": "goods_s_F090W_2018_08_29.fits",
-        "F115W": "goods_s_F115W_2018_08_29.fits",
-        "F150W": "goods_s_F150W_2018_08_29.fits",
-        "F200W": "goods_s_F200W_2018_08_29.fits",
-        "F277W": "goods_s_F277W_2018_08_29.fits",
-        "F335M": "goods_s_F335M_2018_08_29.fits",
-        "F356W": "goods_s_F356W_2018_08_30.fits",
-        "F410M": "goods_s_F410M_2018_08_30.fits",
-        "F444W": "goods_s_F444W_2018_08_31.fits"
-    }
+# def find_image_filename (co_args, imageDir=IMAGES_DIR):
+#     fyls = {
+#         "F090W": "goods_s_F090W_2018_08_29.fits",
+#         "F115W": "goods_s_F115W_2018_08_29.fits",
+#         "F150W": "goods_s_F150W_2018_08_29.fits",
+#         "F200W": "goods_s_F200W_2018_08_29.fits",
+#         "F277W": "goods_s_F277W_2018_08_29.fits",
+#         "F335M": "goods_s_F335M_2018_08_29.fits",
+#         "F356W": "goods_s_F356W_2018_08_30.fits",
+#         "F410M": "goods_s_F410M_2018_08_30.fits",
+#         "F444W": "goods_s_F444W_2018_08_31.fits"
+#     }
 
-    # currently, selecting one image based on filter type
-    selected = fyls.get(co_args.get('filter'))
-    if (not selected):
-        return None
-    else:
-        return selected
+#     # currently, selecting one image based on filter type
+#     selected = fyls.get(co_args.get('filter'))
+#     if (not selected):
+#         return None
+#     else:
+#         return selected
