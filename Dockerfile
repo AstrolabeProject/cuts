@@ -1,4 +1,5 @@
-FROM python:3.7
+FROM python:3.7.5
+
 MAINTAINER Tom Hicks <hickst@email.arizona.edu>
 
 ENV INSTALL_PATH /cuts
