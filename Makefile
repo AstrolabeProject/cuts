@@ -25,7 +25,7 @@ clean:
 	rm -rf cuts/blueprints/pages/__pycache__
 	rm -rf cuts/static/__pycache__
 
-docker:
+docker: clean
 	docker build -t ${IMG} .
 
 down:
