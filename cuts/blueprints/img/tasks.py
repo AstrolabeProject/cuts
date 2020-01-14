@@ -1,3 +1,9 @@
+#
+# Module to containing spawnable Celery tasks for the application.
+#
+#   Written by: Tom Hicks. 11/14/2019.
+#   Last Modified: Modify image list for collection argument. Update for fits_file_exists rename.
+#
 import os
 
 from flask import current_app, jsonify, request, send_file, send_from_directory
@@ -25,8 +31,9 @@ celery = create_celery_app()
 
 # List all FITS images found in the image directory.
 @celery.task()
-def list_images ():
-    image_files = imgr.list_fits_files()
+def list_images (args):
+    collection = args.get("collection")
+    image_files = imgr.list_fits_files(collection=collection)
     return jsonify(image_files)
 
 
@@ -246,7 +253,7 @@ def parse_cutout_size (args):
 # Send the specified image file, from the specified directory,
 # back to the caller, giving it the specified MIME type.
 def return_image (filename, imageDir=IMAGES_DIR, mimetype=FITS_MIME_TYPE):
-    if (imgr.is_fits_file(filename, imageDir)):
+    if (imgr.fits_file_exists(filename, imageDir)):
         return send_from_directory(imageDir, filename, mimetype=mimetype,
                                    as_attachment=True, attachment_filename=filename)
     errMsg = "Specified image file {0} not found in directory {1}".format(filename, imageDir)
