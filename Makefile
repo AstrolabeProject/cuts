@@ -1,5 +1,6 @@
 ENVLOC=/etc/trhenv
 IMG=cuts:devel
+IMGS=${PWD}/images
 STACK=vos
 NAME=vos_cuts_1
 
@@ -40,7 +41,7 @@ exec:
 	docker exec -it ${NAME} bash
 
 run:
-	docker run -d --rm --name ${NAME} -p 8000:8000 -v ${PWD}/images:/vos/images:ro ${IMG}
+	docker run -d --rm --name ${NAME} -p 8000:8000 -v ${IMGS}:/vos/images:ro ${IMG}
 
 stop:
 	docker stop ${NAME}
