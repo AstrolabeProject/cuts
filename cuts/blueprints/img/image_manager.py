@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Fix: SIMPLE value is a Boolean.
+#   Last Modified: Updates for using filepaths instead of filenames.
 #
 import os
 
@@ -32,24 +32,23 @@ def clear_cache ():
 def initialize_cache ():
     """Initialize metadata cache with data from all FITS files in the image directory."""
     clear_cache()
-    for filename in list_fits_files():
-        store_metadata(filename)
+    for filepath in list_fits_paths():
+        store_metadata(filepath)
     # current_app.logger.error("(initialize_cache): CACHE: {}".format(IMAGE_MD_CACHE))
 
 
 def refresh_cache ():
     """Refresh the metadata cache with data from any new or changed FITS files
        found in the image directory."""
-    for filename in list_fits_files():
-        md = get_metadata(filename)         # try to get metadata for file
+    for filepath in list_fits_paths():
+        md = get_metadata(filepath)         # try to get metadata for file
         if (not md):                        # metadata not found in cache
-            store_metadata(filename)        # so add it to cache
+            store_metadata(filepath)        # so add it to cache
         else:                               # metadata was found: check if stale
             ctime = md['timestamp']         # timestamp of data in cache
-            imagepath = image_filepath_from_filename(filename)
-            ftime = os.path.getmtime(imagepath) # modification time on file
+            ftime = os.path.getmtime(filepath) # modification time on file
             if (ftime > ctime):             # if cache data is stale
-                store_metadata(filename)    # update the cache
+                store_metadata(filepath)    # update the cache
 
 
 def by_filter_matcher (co_args, metadata):
@@ -75,32 +74,32 @@ def extract_metadata (filepath):
     return md                               # return the metadata dictionary
 
 
-def fetch_metadata (filename):
+def fetch_metadata (filepath):
     """Get and return the metadata for the specified file. If the metadata is not in cache,
        try to extract it from the file and add it to the cache.
        Returns the extracted metadata or None, if problems encountered."""
-    md = get_metadata(filename)             # try to get metadata for this file
+    md = get_metadata(filepath)             # try to get metadata for this file
     if (not md):                            # if metadata not found in cache
-        if (fits_file_exists(filename)):    # then if fits file exists
-            md = store_metadata(filename)   # try to add file metadata to cache
+        if (fits_file_exists(filepath)):    # then if fits file exists
+            md = store_metadata(filepath)   # try to add file metadata to cache
     return md
 
 
-def get_metadata (filename):
-    """Return the metadata for the given filename, or None if no metadata is found."""
-    return IMAGE_MD_CACHE.get(filename)
+def get_metadata (filepath):
+    """Return the metadata for the given filepath, or None if no metadata is found."""
+    return IMAGE_MD_CACHE.get(filepath)
 
 
-def image_contains (filename, coords):
+def image_contains (filepath, coords):
     """Tell whether the specified image file contains the specified coordinates or not."""
     position = SkyCoord(coords['ra'], coords['dec'], unit='deg')
-    return metadata_contains(fetch_metadata(filename), position)
+    return metadata_contains(fetch_metadata(filepath), position)
 
 
-def image_corners (filename):
+def image_corners (filepath):
     """Return a (possibly empty) list of corner coordinate pairs for the specified image."""
     corners = []
-    md = fetch_metadata(filename)           # get/add metadata from file
+    md = fetch_metadata(filepath)           # get/add metadata from file
     if (md):
         corners = md['corners'].tolist()
     return corners
@@ -111,10 +110,9 @@ def image_filepath_from_filename (filename, imageDir=IMAGES_DIR):
     return os.path.join(imageDir, filename)
 
 
-def fits_file_exists (filename, imageDir=IMAGES_DIR, extents=IMAGE_EXTS):
-    """Tell whether the given filename names a FITS file in the specified image directory or not."""
-    filepath = image_filepath_from_filename(filename, imageDir)
-    return ( utils.is_fits_filename(filename, extents) and
+def fits_file_exists (filepath, imageDir=IMAGES_DIR, extents=IMAGE_EXTS):
+    """Tell whether the given filepath names a FITS file in the specified image directory or not."""
+    return ( utils.is_fits_filename(filepath, extents) and
              os.path.exists(filepath) and
              os.path.isfile(filepath) )
 
@@ -125,7 +123,7 @@ def is_image_file (filepath):
     return (hdr['SIMPLE'] and (hdr['NAXIS'] == 2))
 
 
-def list_fits_files (imageDir=IMAGES_DIR, extents=IMAGE_EXTS, collection=None):
+def list_fits_paths (imageDir=IMAGES_DIR, extents=IMAGE_EXTS, collection=None):
     """Return a list of filepaths for FITS files in the given directory.
        FITS files are identified by the given list of valid file extensions."""
     subdir = imageDir
@@ -135,12 +133,12 @@ def list_fits_files (imageDir=IMAGES_DIR, extents=IMAGE_EXTS, collection=None):
 
 
 def match_image (co_args, imageDir=IMAGES_DIR, match_fn=None):
-    """Return the filename of an image, from the specified image directory, which contains
+    """Return the filepath of an image, from the specified image directory, which contains
        the specified coordinate arguments and satisfies the (optional) given matching function."""
     position = SkyCoord(co_args['ra'], co_args['dec'], unit='deg')
 
-    for filename in list_fits_files(imageDir=imageDir):
-        md = fetch_metadata(filename)
+    for filepath in list_fits_paths(imageDir=imageDir):
+        md = fetch_metadata(filepath)
         if (not md):                        # if unable to get metadata
             continue                        # then skip this file
 
@@ -148,10 +146,10 @@ def match_image (co_args, imageDir=IMAGES_DIR, match_fn=None):
         if (match_fn and (not match_fn(co_args, md))):
             continue
 
-        # if file contains the position, then return the matching filename immediately
+        # if file contains the position, then return the matching filepath immediately
         if (metadata_contains(md, position)):
-            current_app.logger.info("(match_image): MATCHED => {0}".format(filename))
-            return filename
+            current_app.logger.info("(match_image): MATCHED => {0}".format(filepath))
+            return filepath
 
     return None                             # signal failure to find matching file
 
@@ -166,9 +164,9 @@ def metadata_contains (metadata, position):
         return False
 
 
-def put_metadata (filename, md):
-    """Put the given metadata into the cache, keyed by the given filename."""
-    IMAGE_MD_CACHE[filename] = md
+def put_metadata (filepath, md):
+    """Put the given metadata into the cache, keyed by the given filepath."""
+    IMAGE_MD_CACHE[filepath] = md
 
 
 def show_cache ():
@@ -176,15 +174,14 @@ def show_cache ():
     return repr(IMAGE_MD_CACHE)
 
 
-def store_metadata (filename, imageDir=IMAGES_DIR):
+def store_metadata (filepath, imageDir=IMAGES_DIR):
     """Extract, cache, and return the metadata from the specified file in the specified directory.
-       Assumes filename refers to a valid, readable FITS file in the specified directory.
+       Assumes filepath refers to a valid, readable FITS file in the specified directory.
        Returns the extracted metadata or None, if problems encountered."""
-    imagepath = image_filepath_from_filename(filename, imageDir=imageDir)
-    if (is_image_file(imagepath)):
-        md = extract_metadata(imagepath)
+    if (is_image_file(filepath)):
+        md = extract_metadata(filepath)
         if (md):
-            put_metadata(filename, md)
+            put_metadata(filepath, md)
         return md
     else:
         return None

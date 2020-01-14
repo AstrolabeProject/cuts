@@ -2,7 +2,7 @@
 # Module to containing spawnable Celery tasks for the application.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Modify image list for collection argument. Update for fits_file_exists rename.
+#   Last Modified: Update for rename to list_fits_paths.
 #
 import os
 
@@ -33,7 +33,7 @@ celery = create_celery_app()
 @celery.task()
 def list_images (args):
     collection = args.get("collection")
-    image_files = imgr.list_fits_files(collection=collection)
+    image_files = imgr.list_fits_paths(collection=collection)
     return jsonify(image_files)
 
 
@@ -64,7 +64,7 @@ def image_corners (filename):
 # List all existing cutouts in the cache directory.
 @celery.task()
 def list_cutouts ():
-    image_files = imgr.list_fits_files(imageDir=CUTOUTS_DIR)
+    image_files = imgr.list_fits_paths(imageDir=CUTOUTS_DIR)
     return jsonify(image_files)
 
 
