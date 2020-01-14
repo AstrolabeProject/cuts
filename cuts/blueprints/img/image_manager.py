@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Modify image list for collection argument. Update for fits_file_exists rename. Use utils module.
+#   Last Modified: Fix: SIMPLE value is a Boolean.
 #
 import os
 
@@ -122,7 +122,7 @@ def fits_file_exists (filename, imageDir=IMAGES_DIR, extents=IMAGE_EXTS):
 def is_image_file (filepath):
     """Tell whether the given FITS file contains an image or not"""
     hdr = fits.getheader(filepath)
-    return ((hdr['SIMPLE'] == 'T') and (hdr['NAXIS'] == 2))
+    return (hdr['SIMPLE'] and (hdr['NAXIS'] == 2))
 
 
 def list_fits_files (imageDir=IMAGES_DIR, extents=IMAGE_EXTS, collection=None):
