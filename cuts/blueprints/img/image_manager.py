@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Remove EXTEND field check. Embed method doc strings. Remove old code.
+#   Last Modified: Modify image list for collection argument. Update for fits_file_exists rename. Use utils module.
 #
 import os
 
@@ -15,6 +15,9 @@ from astropy import units as u
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
+
+import cuts.blueprints.img.utils as utils
+
 
 # The metadata cache
 IMAGE_MD_CACHE = {}
@@ -78,7 +81,7 @@ def fetch_metadata (filename):
        Returns the extracted metadata or None, if problems encountered."""
     md = get_metadata(filename)             # try to get metadata for this file
     if (not md):                            # if metadata not found in cache
-        if (is_fits_file(filename)):        # then if fits file exists
+        if (fits_file_exists(filename)):    # then if fits file exists
             md = store_metadata(filename)   # try to add file metadata to cache
     return md
 
@@ -108,10 +111,10 @@ def image_filepath_from_filename (filename, imageDir=IMAGES_DIR):
     return os.path.join(imageDir, filename)
 
 
-def is_fits_file (filename, imageDir=IMAGES_DIR, extents=IMAGE_EXTS):
+def fits_file_exists (filename, imageDir=IMAGES_DIR, extents=IMAGE_EXTS):
     """Tell whether the given filename names a FITS file in the specified image directory or not."""
     filepath = image_filepath_from_filename(filename, imageDir)
-    return ( filename.endswith(tuple(extents)) and
+    return ( utils.is_fits_filename(filename, extents) and
              os.path.exists(filepath) and
              os.path.isfile(filepath) )
 
@@ -122,10 +125,13 @@ def is_image_file (filepath):
     return ((hdr['SIMPLE'] == 'T') and (hdr['NAXIS'] == 2))
 
 
-def list_fits_files (imageDir=IMAGES_DIR, extents=IMAGE_EXTS):
+def list_fits_files (imageDir=IMAGES_DIR, extents=IMAGE_EXTS, collection=None):
     """Return a list of filepaths for FITS files in the given directory.
        FITS files are identified by the given list of valid file extensions."""
-    return [ fyl for fyl in os.listdir(imageDir) if (fyl.endswith(tuple(extents))) ]
+    subdir = imageDir
+    if (collection):
+        subdir = os.path.join(imageDir, collection)
+    return [ fyl for fyl in utils.gen_file_paths(subdir) if (utils.is_fits_filename(fyl, extents)) ]
 
 
 def match_image (co_args, imageDir=IMAGES_DIR, match_fn=None):
