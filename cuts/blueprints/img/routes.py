@@ -2,7 +2,7 @@
 # Top-level Flask routing module: answers requests or spawns Celery task to do it.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Embed method doc strings.
+#   Last Modified: Modify image list for collection argument.
 #
 from flask import Blueprint, jsonify, request
 # from flask_cors import CORS
@@ -22,7 +22,7 @@ def img_list ():
     """ List all FITS images found in the image directory or a sub-collection. """
     # required to avoid circular imports
     from cuts.blueprints.img.tasks import list_images
-    return list_images()
+    return list_images(request.args)
 
 
 @img.route('/img/<filename>', methods=['GET'])
