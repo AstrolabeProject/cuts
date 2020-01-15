@@ -30,7 +30,7 @@ def img_fetch (filename):
     """ Fetch a specific image by filename. """
     # required to avoid circular imports
     from cuts.blueprints.img.tasks import fetch_image
-    return fetch_image(filename)
+    return fetch_image(filename, request.args)
 
 
 @img.route('/img/contains/<filename>', methods=['GET'])
@@ -46,7 +46,15 @@ def img_corners (filename):
     """ Return the corner coordinates of the specified image. """
     # required to avoid circular imports
     from cuts.blueprints.img.tasks import image_corners
-    return image_corners(filename)
+    return image_corners(filename, request.args)
+
+
+@img.route('/img/collections/list')
+def coll_list ():
+    """ List image collections found in the image directory. """
+    # required to avoid circular imports
+    from cuts.blueprints.img.tasks import list_collections
+    return list_collections(request.args)
 
 
 #
@@ -58,7 +66,7 @@ def co_list ():
     """ List all existing cutouts in the cache directory. """
     # required to avoid circular imports
     from cuts.blueprints.img.tasks import list_cutouts
-    return list_cutouts()
+    return list_cutouts(request.args)
 
 
 @img.route('/img/co/<filename>', methods=['GET'])
@@ -66,7 +74,7 @@ def co_fetch (filename):
     """ Fetch a specific cutout by filename. """
     # required to avoid circular imports
     from cuts.blueprints.img.tasks import fetch_cutout
-    return fetch_cutout(filename)
+    return fetch_cutout(filename, request.args)
 
 
 @img.route('/img/co/cutout')
