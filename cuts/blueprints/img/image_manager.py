@@ -3,14 +3,13 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Move return_image here. Add method to list collections. Format method doc strings.
-#                  WIP: add collection to metadata, cache, and matching.
+#   Last Modified: Refactor for image collections.
 #
 import os
+import pathlib as pl
 
 from flask import current_app, request, send_file, send_from_directory
 
-from astropy import units as u
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
@@ -63,36 +62,38 @@ def by_filter_matcher (co_args, metadata):
 
 def cache_key_from_metadata (metadata):
     """ Return the cache key for an entry from the given metadata. """
-    # TODO: IMPLEMENT LATER     
-    # return PurePath of parts?
-    # return filename if top-level else return (collection-name filename) if in collection?
-    key = metadata.get('filepath')          # IMPLEMENT LATER
-    return key
+    return metadata.get('filepath')
 
 
 def collection_from_filepath (filepath):
-    """ Return the collection name from the given filepath or None. """
-    collection = None
-    # TODO: IMPLEMENT LATER     
-    return collection
+    """ Return a collection name string from the given filepath or the empty string. """
+    rpath = pl.PurePath(filepath).relative_to(IMAGES_DIR) # remove the images root directory
+    coll_parts = list(rpath.parts)[:-1]     # drop the filename
+    return os.sep.join(coll_parts)
 
 
-def extract_metadata (filepath):
+def extract_metadata (filepath, header=None):
     """ Extract and return the metadata from the file at the given file path.
-        Assumes that the given file path points to a valid, readable FITS file! """
-    timestamp = os.path.getmtime(filepath)
-    collection = collection_from_filepath(filepath)
-    hdr = fits.getheader(filepath)
-    filt = hdr.get('FILTER')
-    wcs = WCS(hdr)
+        Assumes that the given file path points to a valid, readable FITS image file! """
+    if (not header):
+        header = fits.getheader(filepath)
+
+    wcs = WCS(header)
     center_pt = wcs.wcs.crval
     corners = wcs.calc_footprint()          # clockwise, starting w/ bottom left corner
+
+    timestamp = os.path.getmtime(filepath)
     md = { 'filepath': filepath, 'timestamp': timestamp,
            'wcs': wcs, 'center': center_pt, 'corners': corners }
+
+    collection = collection_from_filepath(filepath)
     if (collection):                        # if image is in a collection
         md['collection'] = collection       # save collection name in metadata
+
+    filt = header.get('FILTER')
     if (filt):                              # if image has FILTER header
         md['filter'] = filt.strip()         # save it as metadata
+
     return md                               # return the metadata dictionary
 
 
@@ -106,6 +107,13 @@ def fetch_metadata (filepath):
         if (fits_file_exists(filepath)):    # then if fits file exists
             md = store_metadata(filepath)   # try to add file metadata to cache
     return md
+
+
+def fits_file_exists (filepath):
+    """ Tell whether the given filepath names a FITS file or not. """
+    return ( utils.is_fits_filename(filepath, IMAGE_EXTS) and
+             os.path.exists(filepath) and
+             os.path.isfile(filepath) )
 
 
 def get_metadata (filepath):
@@ -124,52 +132,46 @@ def image_corners (filepath):
     corners = []
     md = fetch_metadata(filepath)           # get/add metadata from file
     if (md):
-        corners = md['corners'].tolist()
+        corners = md.get('corners').tolist()
     return corners
 
 
-def image_filepath_from_filename (filename, imageDir=IMAGES_DIR):
-    """ Return a filepath for the given filename in the specified image directory. """
-    return os.path.join(imageDir, filename)
-
-
-def fits_file_exists (filepath, imageDir=IMAGES_DIR, extents=IMAGE_EXTS):
-    """ Tell whether the given filepath names a FITS file in the specified image directory or not. """
-    return ( utils.is_fits_filename(filepath, extents) and
-             os.path.exists(filepath) and
-             os.path.isfile(filepath) )
+def image_dir_from_collection (collection=None, image_dir=IMAGES_DIR):
+    """ Return a directory path for the given collection in the specified image directory. """
+    return os.path.join(image_dir, collection) if collection else image_dir
 
 
 def is_image_file (filepath):
-    """ Tell whether the given FITS file contains an image or not """
-    hdr = fits.getheader(filepath)
-    return (hdr['SIMPLE'] and (hdr['NAXIS'] == 2))
+    """ Tell whether the given FITS file contains an image or not. """
+    return is_image_header(fits.getheader(filepath))
 
 
-def list_collections (imageDir=IMAGES_DIR):
-    """ List all image collections found in the image directory. NB: depth 1 only, for now."""
-    (_, dirs, _) = next(os.walk(imageDir, followlinks=True))
+def is_image_header (header):
+    """ Tell whether the given FITS header signals a FITS image file or not. """
+    return (header.get('SIMPLE') and (header.get('NAXIS') == 2))
+
+
+def list_collections ():
+    """ List all image sub-collections found in the image directory. NB: depth 1 only, for now."""
+    # TODO: go deep
+    (_, dirs, _) = next(os.walk(IMAGES_DIR, followlinks=True))
     return dirs
 
 
-def list_fits_paths (imageDir=IMAGES_DIR, extents=IMAGE_EXTS, collection=None):
-    """ Return a list of filepaths for FITS files in the given directory.
+def list_fits_paths (collection=None):
+    """ Return a list of filepaths for FITS files in the image directory or a sub-collection.
         FITS files are identified by the given list of valid file extensions. """
-    if (collection):
-        imageDir = os.path.join(imageDir, collection)
-    return [ fyl for fyl in utils.gen_file_paths(imageDir) if (utils.is_fits_filename(fyl, extents)) ]
+    imageDir = image_dir_from_collection(collection)
+    return [ fyl for fyl in utils.gen_file_paths(imageDir) if (utils.is_fits_filename(fyl, IMAGE_EXTS)) ]
 
 
-def match_image (co_args, imageDir=IMAGES_DIR, match_fn=None):
+def match_image (co_args, match_fn=None):
     """ Return the filepath of an image, from the specified image directory, which contains
-        the specified coordinate arguments and satisfies the (optional) given matching function. """
-    collection = co_args['collection']      # if collection argument has been given
-    if (collection):                        # append it to the images directory path
-        imageDir = os.path.join(imageDir, collection)
-
+        the specified coordinate arguments and satisfies the (optional) given matching function.
+    """
     position = SkyCoord(co_args['ra'], co_args['dec'], unit='deg')
 
-    for filepath in list_fits_paths(imageDir=imageDir):
+    for filepath in list_fits_paths(collection=co_args.get('collection')):
         md = fetch_metadata(filepath)
         if (not md):                        # if unable to get metadata
             continue                        # then skip this file
@@ -190,8 +192,11 @@ def metadata_contains (metadata, position):
     """ Use the given image metadata to tell whether the image contains the given position or not.
         Returns True if the position is contained within the image footprint or False otherwise. """
     if (metadata):
-        wcs = metadata['wcs']
-        return wcs.footprint_contains(position).tolist() # tolist converts numpy bool
+        wcs = metadata.get('wcs')
+        if (wcs):
+            return wcs.footprint_contains(position).tolist() # tolist converts numpy bool
+        else:
+            return False
     else:
         return False
 
@@ -202,13 +207,13 @@ def put_metadata (filepath, md):
     IMAGE_MD_CACHE[cache_key] = md
 
 
-def return_image (filename, imageDir=IMAGES_DIR, mimetype=FITS_MIME_TYPE):
-    """ Send the specified image file, from the specified directory,
-        back to the caller, giving it the specified MIME type. """
-    if (fits_file_exists(filename, imageDir)):
+def return_image (filepath, collection=None, mimetype=FITS_MIME_TYPE):
+    """ Return the specified image file, giving it the specified MIME type. """
+    if (fits_file_exists(filepath)):
+        (imageDir, filename) = os.path.split(filepath)
         return send_from_directory(imageDir, filename, mimetype=mimetype,
                                    as_attachment=True, attachment_filename=filename)
-    errMsg = "Specified image file {0} not found in directory {1}".format(filename, imageDir)
+    errMsg = "Specified image file '{0}' not found".format(filepath)
     current_app.logger.error(errMsg)
     raise exceptions.ImageNotFound(errMsg)
 
@@ -218,16 +223,19 @@ def show_cache ():
     return repr(IMAGE_MD_CACHE)
 
 
-def store_metadata (filepath, imageDir=IMAGES_DIR):
-    """ Extract, cache, and return the metadata from the specified file in the
-        specified directory. Assumes filepath refers to a valid, readable FITS file
-        in the specified directory.
+def store_metadata (filepath):
+    """ Extract, cache, and return the metadata from the file at the given filepath.
+        Assumes filepath refers to a valid, readable FITS file.
         Returns the extracted metadata or None, if problems encountered.
     """
-    if (is_image_file(filepath)):
-        md = extract_metadata(filepath)
-        if (md):
-            put_metadata(filepath, md)
-        return md
+    if (utils.is_fits_filename(filepath, IMAGE_EXTS)):
+        hdr = fits.getheader(filepath)
+        if (is_image_header(hdr)):
+            md = extract_metadata(filepath, header=hdr)
+            if (md):
+                put_metadata(filepath, md)
+            return md
+        else:
+            return None
     else:
         return None
