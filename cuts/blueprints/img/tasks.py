@@ -2,11 +2,11 @@
 # Module to containing spawnable Celery tasks for the application.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Update for image collections. Comment out YAGNI methods. Add cutout help methods.
+#   Last Modified: Fixes upon testing in Firefly.
 #
 import os
 
-from flask import current_app, jsonify, request
+from flask import current_app, jsonify, request, send_from_directory
 
 from astropy import units as u
 from astropy.io import fits
@@ -87,7 +87,7 @@ def get_cutout (args):
         return imgr.return_image(image_filepath) # exit and return entire image
 
     # actually make the cutout
-    hdu = fits.open(image_path)[0]
+    hdu = fits.open(image_filepath)[0]
     cutout = make_cutout(hdu, co_args)
 
     # write the cutout to a new FITS file and then return it
@@ -117,7 +117,7 @@ def get_cutout_by_filter (args):
         return imgr.return_image(image_filepath) # exit and return entire image
 
     # actually make the cutout
-    hdu = fits.open(image_path)[0]
+    hdu = fits.open(image_filepath)[0]
     cutout = make_cutout(hdu, co_args)
 
     # write the cutout to a new FITS file and then return it
@@ -157,9 +157,9 @@ def make_cutout (hdu, co_args):
     return cutout
 
 
-def make_cutout_filename (image_path, cutout, co_args):
+def make_cutout_filename (image_filepath, cutout, co_args):
     """ Return a filename for the Astropy cutout from info in the given parameters. """
-    baseName = os.path.splitext(os.path.basename(image_path))[0]
+    baseName = os.path.splitext(os.path.basename(image_filepath))[0]
     ra = co_args['ra']
     dec = co_args['dec']
     shape = cutout.shape
