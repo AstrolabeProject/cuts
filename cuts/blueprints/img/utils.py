@@ -1,7 +1,7 @@
 #
 # Module to provide general utility functions for Astrolabe code.
 #   Written by: Tom Hicks. 7/26/2018.
-#   Last Modified: Add test for fits filename. Generalize method to file path generator.
+#   Last Modified: Add default FITS extensions, use in is_fits_filename test.
 #
 import fnmatch
 import os
@@ -11,12 +11,16 @@ import pathlib as pl
 _FITS_PAT = "*.fits"
 _GZFITS_PAT = "*.fits.gz"
 
+# suffixes for identifying FITS and gzipped FITS files
+_FITS_EXTENTS = [ 'fits', 'fits.gz' ]
+
 
 def is_fits_file (fyl):
     """ Return True if the given file is FITS file, else False. """
     return (fnmatch.fnmatch(fyl, _FITS_PAT) or fnmatch.fnmatch(fyl, _GZFITS_PAT))
 
-def is_fits_filename (filename, extents):
+
+def is_fits_filename (filename, extents=_FITS_EXTENTS):
     """ Return True if the given filename string names a FITS file, else False. """
     return (filename.endswith(tuple(extents)))
 
