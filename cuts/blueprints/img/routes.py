@@ -2,7 +2,7 @@
 # Top-level Flask routing module: answers requests or spawns Celery task to do it.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Doc string updates for collections. Comment out YAGNI methods.
+#   Last Modified: Delete YAGNI methods. Correct fetch arg name and doc string.
 #
 from flask import Blueprint, jsonify, request
 # from flask_cors import CORS
@@ -25,28 +25,12 @@ def img_list ():
     return list_images(request.args)
 
 
-@img.route('/img/<filename>', methods=['GET'])
-def img_fetch (filename):
-    """ Fetch a specific image by filename and optional sub-collection. """
+@img.route('/img/<filepath>', methods=['GET'])
+def img_fetch (filepath):
+    """ Fetch a specific image by filepath. """
     # required to avoid circular imports
     from cuts.blueprints.img.tasks import fetch_image
-    return fetch_image(filename, request.args)
-
-
-# @img.route('/img/contains/<filename>', methods=['GET'])
-# def img_contains (filename):
-#     """ Tell whether the specified image contains the specified coordinate. """
-#     # required to avoid circular imports
-#     from cuts.blueprints.img.tasks import image_contains
-#     return image_contains(filename, request.args)
-
-
-# @img.route('/img/corners/<filename>', methods=['GET'])
-# def img_corners (filename):
-#     """ Return the corner coordinates of the specified image. """
-#     # required to avoid circular imports
-#     from cuts.blueprints.img.tasks import image_corners
-#     return image_corners(filename, request.args)
+    return fetch_image(filepath, request.args)
 
 
 @img.route('/img/collections/list')
