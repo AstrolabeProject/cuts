@@ -3,12 +3,12 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Refactor for image collections.
+#   Last Modified: Trivial removal of unused import.
 #
 import os
 import pathlib as pl
 
-from flask import current_app, request, send_file, send_from_directory
+from flask import current_app, request, send_from_directory
 
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
