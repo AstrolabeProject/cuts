@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Trivial removal of unused import.
+#   Last Modified: Add logic to generate and list collection names.
 #
 import os
 import pathlib as pl
@@ -65,9 +65,25 @@ def cache_key_from_metadata (metadata):
     return metadata.get('filepath')
 
 
+def collection_from_dirpath (dirpath):
+    """ Return a collection name string, or the empty string, from the given directory path.
+        The given directory path must be a subpath of the current images root directory.
+    """
+    try:
+        rpath = pl.PurePath(dirpath).relative_to(IMAGES_DIR) # remove the images root directory
+    except ValueError:
+        return ''
+    return os.sep.join(list(rpath.parts))
+
+
 def collection_from_filepath (filepath):
-    """ Return a collection name string from the given filepath or the empty string. """
-    rpath = pl.PurePath(filepath).relative_to(IMAGES_DIR) # remove the images root directory
+    """ Return a collection name string, or the empty string, from the given filepath.
+        The given filepath must be a subpath of the current images root directory.
+    """
+    try:
+        rpath = pl.PurePath(filepath).relative_to(IMAGES_DIR) # remove the images root directory
+    except ValueError:
+        return ''
     coll_parts = list(rpath.parts)[:-1]     # drop the filename
     return os.sep.join(coll_parts)
 
@@ -116,6 +132,15 @@ def fits_file_exists (filepath):
              os.path.isfile(filepath) )
 
 
+def gen_collection_names (image_dir=IMAGES_DIR):
+    """ Generator to yield all collection names: subdirectories of the images root directory. """
+    # (_, dirs, _) = next(os.walk(IMAGES_DIR, followlinks=True)) # this does depth 1 only
+    for dirpath, _, _ in os.walk(image_dir, followlinks=True):
+        dir_path = collection_from_dirpath(dirpath)
+        if (dir_path):                      # skip empty entries
+            yield dir_path
+
+
 def get_metadata (filepath):
     """ Return the metadata for the given filepath, or None if no metadata is found. """
     return IMAGE_MD_CACHE.get(filepath)
@@ -152,10 +177,8 @@ def is_image_header (header):
 
 
 def list_collections ():
-    """ List all image sub-collections found in the image directory. NB: depth 1 only, for now."""
-    # TODO: go deep
-    (_, dirs, _) = next(os.walk(IMAGES_DIR, followlinks=True))
-    return dirs
+    """ Return a list of collection name strings for collections of the images directory. """
+    return [ cname for cname in gen_collection_names() ]
 
 
 def list_fits_paths (collection=None):
