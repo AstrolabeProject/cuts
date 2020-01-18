@@ -2,7 +2,7 @@
 # Top-level Flask routing module: answers requests or spawns Celery task to do it.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Delete YAGNI methods. Correct fetch arg name and doc string.
+#   Last Modified: Change fetch method URLs to use args.
 #
 from flask import Blueprint, jsonify, request
 # from flask_cors import CORS
@@ -25,12 +25,12 @@ def img_list ():
     return list_images(request.args)
 
 
-@img.route('/img/<filepath>', methods=['GET'])
-def img_fetch (filepath):
+@img.route('/img/fetch')
+def img_fetch ():
     """ Fetch a specific image by filepath. """
     # required to avoid circular imports
     from cuts.blueprints.img.tasks import fetch_image
-    return fetch_image(filepath, request.args)
+    return fetch_image(request.args)
 
 
 @img.route('/img/collections/list')
@@ -53,12 +53,12 @@ def co_list ():
     return list_cutouts(request.args)
 
 
-@img.route('/img/co/<filename>', methods=['GET'])
-def co_fetch (filename):
-    """ Fetch a specific cutout by filename. """
+@img.route('/img/co/fetch')
+def co_fetch ():
+    """ Fetch a specific cutout by filepath. """
     # required to avoid circular imports
     from cuts.blueprints.img.tasks import fetch_cutout
-    return fetch_cutout(filename, request.args)
+    return fetch_cutout(request.args)
 
 
 @img.route('/img/co/cutout')

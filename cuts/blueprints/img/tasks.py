@@ -2,7 +2,7 @@
 # Module to containing spawnable Celery tasks for the application.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Fixes upon testing in Firefly.
+#   Last Modified: Change fetch method URLs to use args.
 #
 import os
 
@@ -40,8 +40,13 @@ def list_images (args):
 
 
 @celery.task()
-def fetch_image (filepath, args):
+def fetch_image (args):
     """ Fetch a specific image by filepath. """
+    filepath = args.get("path")
+    if (not filepath):
+        errMsg = "An image file path must be specified, via the 'path' argument"
+        current_app.logger.error(errMsg)
+        raise exceptions.RequestException(errMsg)
     return imgr.return_image(filepath)
 
 
@@ -64,9 +69,14 @@ def list_cutouts (args):
 
 
 @celery.task()
-def fetch_cutout (filename, args):
-    """ Fetch a specific cutout by filename. """
-    return return_cutout(filename)
+def fetch_cutout (args):
+    """ Fetch a specific image cutout by filepath. """
+    filepath = args.get("path")
+    if (not filepath):
+        errMsg = "An image cutout file path must be specified, via the 'path' argument"
+        current_app.logger.error(errMsg)
+        raise exceptions.RequestException(errMsg)
+    return return_cutout(filepath)
 
 
 @celery.task()
