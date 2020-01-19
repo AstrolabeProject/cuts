@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Add logic to generate and list collection names.
+#   Last Modified: Allow coordinate reference system in coordinate arguments.
 #
 import os
 import pathlib as pl
@@ -148,7 +148,7 @@ def get_metadata (filepath):
 
 def image_contains (filepath, coords):
     """ Tell whether the specified image file contains the specified coordinates or not. """
-    position = SkyCoord(coords['ra'], coords['dec'], unit='deg')
+    position = SkyCoord(coords['ra'], coords['dec'], unit='deg', frame=coords.get('frame','icrs'))
     return metadata_contains(fetch_metadata(filepath), position)
 
 
@@ -192,7 +192,7 @@ def match_image (co_args, match_fn=None):
     """ Return the filepath of an image, from the specified image directory, which contains
         the specified coordinate arguments and satisfies the (optional) given matching function.
     """
-    position = SkyCoord(co_args['ra'], co_args['dec'], unit='deg')
+    position = SkyCoord(co_args['ra'], co_args['dec'], unit='deg', frame=co_args.get('frame','icrs'))
 
     for filepath in list_fits_paths(collection=co_args.get('collection')):
         md = fetch_metadata(filepath)

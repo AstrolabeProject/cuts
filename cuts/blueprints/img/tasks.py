@@ -2,7 +2,7 @@
 # Module to containing spawnable Celery tasks for the application.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Change fetch method URLs to use args.
+#   Last Modified: Allow coordinate reference system in coordinate arguments.
 #
 import os
 
@@ -34,7 +34,7 @@ celery = create_celery_app()
 @celery.task()
 def list_images (args):
     """ List FITS images found in the image directory or a sub-collection. """
-    collection = args.get("collection")
+    collection = args.get('collection')
     image_info = imgr.list_fits_paths(collection=collection)
     return jsonify(image_info)
 
@@ -42,7 +42,7 @@ def list_images (args):
 @celery.task()
 def fetch_image (args):
     """ Fetch a specific image by filepath. """
-    filepath = args.get("path")
+    filepath = args.get('path')
     if (not filepath):
         errMsg = "An image file path must be specified, via the 'path' argument"
         current_app.logger.error(errMsg)
@@ -71,7 +71,7 @@ def list_cutouts (args):
 @celery.task()
 def fetch_cutout (args):
     """ Fetch a specific image cutout by filepath. """
-    filepath = args.get("path")
+    filepath = args.get('path')
     if (not filepath):
         errMsg = "An image cutout file path must be specified, via the 'path' argument"
         current_app.logger.error(errMsg)
@@ -181,7 +181,7 @@ def parse_coordinate_args (args):
         of coordinate arguments. """
     co_args = {}
 
-    raStr = args.get("ra")
+    raStr = args.get('ra')
     if (not raStr):
         errMsg = "Right ascension must be specified, via the 'ra' argument"
         current_app.logger.error(errMsg)
@@ -190,7 +190,7 @@ def parse_coordinate_args (args):
         ra = float(raStr)
         co_args['ra'] = ra
 
-    decStr = args.get("dec")
+    decStr = args.get('dec')
     if (not decStr):
         errMsg = "Declination must be specified, via the 'dec' argument"
         current_app.logger.error(errMsg)
@@ -199,14 +199,16 @@ def parse_coordinate_args (args):
         dec = float(decStr)
         co_args['dec'] = dec
 
-    co_args['center'] = SkyCoord(ra=ra*u.degree, dec=dec*u.degree, frame='icrs')
+    frame = args.get('frame', 'icrs')       # get optional coordinate reference system
+
+    co_args['center'] = SkyCoord(ra=ra*u.degree, dec=dec*u.degree, frame=frame)
 
     return co_args                          # return parsed, converted cutout arguments
 
 
 def parse_collection_arg (args):
     """ Return a (possibly empty) dictionary containing the collection argument. """
-    coll = args.get("collection")
+    coll = args.get('collection')
     if (coll):
         return { 'collection': coll }
     else:
@@ -224,7 +226,7 @@ def parse_cutout_args (args, filterRequired=False):
 
     co_args.update(parse_collection_arg(args)) # add collection parameter
 
-    filt = args.get("filter")
+    filt = args.get('filter')
     if (filt):
         co_args['filter'] = filt
     else:
@@ -242,9 +244,9 @@ def parse_cutout_size (args):
     co_args = {}                            # dictionary to hold parsed fields
 
     # read and parse a size specification in arc minutes or degrees
-    sizeArcMinStr = args.get("sizeArcMin")
-    sizeDegStr = args.get("sizeDeg")
-    sizeArcSecStr = args.get("sizeArcSec")
+    sizeArcMinStr = args.get('sizeArcMin')
+    sizeDegStr = args.get('sizeDeg')
+    sizeArcSecStr = args.get('sizeArcSec')
 
     if (sizeArcMinStr):                     # prefer units in arc minutes
         co_args['units'] = u.arcmin
