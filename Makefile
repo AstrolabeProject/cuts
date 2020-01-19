@@ -15,6 +15,7 @@ help:
 	@echo '           exec    - exec into running Flask server (CLI arg: NAME=containerID)'
 	@echo '           run     - start a standalone Flask server container (for testing)'
 	@echo '           stop    - stop a running standalone Flask server container'
+	@echo '           test    - run all tests in a standalone Flask server container'
 	@echo '           up      - start a Cuts server stack (for development)'
 	@echo '           watch   - show logfile for a running Flask server container'
 
@@ -42,6 +43,9 @@ exec:
 
 run:
 	docker run -d --rm --name ${NAME} -p 8000:8000 -v ${IMGS}:/vos/images:ro ${IMG}
+
+test:
+	docker exec -it ${NAME} py.test cuts/tests
 
 stop:
 	docker stop ${NAME}
