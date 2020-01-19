@@ -1,11 +1,12 @@
+#
+# Module to containing spawnable Celery tasks for the application.
+#
+#   Written by: Tom Hicks. 11/14/2019.
+#   Last Modified: Allow coordinate reference system in coordinate arguments.
+#
 import os
 
-from flask import current_app, jsonify, request, send_file, send_from_directory
-
-from cuts.app import create_celery_app
-from config.settings import CUTOUTS_DIR, CUTOUTS_MODE, FITS_MIME_TYPE, IMAGES_DIR, IMAGE_EXTS
-from cuts.blueprints.img import exceptions
-import cuts.blueprints.img.image_manager as imgr
+from flask import current_app, jsonify, request, send_from_directory
 
 from astropy import units as u
 from astropy.io import fits
@@ -13,6 +14,13 @@ from astropy.coordinates import SkyCoord
 from astropy.nddata import Cutout2D
 from astropy.nddata.utils import NoOverlapError, PartialOverlapError
 from astropy.wcs import WCS
+
+from config.settings import CUTOUTS_DIR, CUTOUTS_MODE, FITS_MIME_TYPE
+
+from cuts.app import create_celery_app
+from cuts.blueprints.img import exceptions
+import cuts.blueprints.img.image_manager as imgr
+import cuts.blueprints.img.utils as utils
 
 
 # Instantiate the Celery client appication
@@ -23,106 +31,110 @@ celery = create_celery_app()
 # Full image methods
 #
 
-# List all FITS images found in the image directory.
 @celery.task()
-def list_images ():
-    image_files = imgr.list_fits_files()
-    return jsonify(image_files)
+def list_images (args):
+    """ List FITS images found in the image directory or a sub-collection. """
+    collection = args.get('collection')
+    image_info = imgr.list_fits_paths(collection=collection)
+    return jsonify(image_info)
 
 
-# Fetch a specific image by filename.
 @celery.task()
-def fetch_image (filename):
-    return return_image(filename)
+def fetch_image (args):
+    """ Fetch a specific image by filepath. """
+    filepath = args.get('path')
+    if (not filepath):
+        errMsg = "An image file path must be specified, via the 'path' argument"
+        current_app.logger.error(errMsg)
+        raise exceptions.RequestException(errMsg)
+    return imgr.return_image(filepath)
 
 
-# Tell whether the specified image contains the specified coordinate or not.
 @celery.task()
-def image_contains (filename, args):
-    coords = parse_coordinate_args(args)
-    res = imgr.image_contains(filename, coords)
-    return jsonify([imgr.image_contains(filename, coords)])
+def list_collections (args):
+    """ List all image collections found in the image directory. """
+    return jsonify(imgr.list_collections())
 
-
-# Return the corner coordinates of the specified image.
-@celery.task()
-def image_corners (filename):
-    return jsonify(imgr.image_corners(filename))
 
 
 #
 # Image cutout methods
 #
 
-# List all existing cutouts in the cache directory.
 @celery.task()
-def list_cutouts ():
-    image_files = imgr.list_fits_files(imageDir=CUTOUTS_DIR)
-    return jsonify(image_files)
+def list_cutouts (args):
+    """ List all existing cutouts in the cache directory. """
+    cutout_paths = [ fyl for fyl in utils.gen_file_paths(CUTOUTS_DIR) ]
+    return jsonify(cutout_paths)
 
 
-# Fetch a specific cutout by filename.
 @celery.task()
-def fetch_cutout (filename):
-    return return_image(filename, imageDir=CUTOUTS_DIR)
+def fetch_cutout (args):
+    """ Fetch a specific image cutout by filepath. """
+    filepath = args.get('path')
+    if (not filepath):
+        errMsg = "An image cutout file path must be specified, via the 'path' argument"
+        current_app.logger.error(errMsg)
+        raise exceptions.RequestException(errMsg)
+    return return_cutout(filepath)
 
 
-# Make and return an image cutout.
 @celery.task()
 def get_cutout (args):
+    """ Make and return an image cutout. """
+
     # parse the parameters for the cutout
     co_args = parse_cutout_args(args)
 
     # figure out which image to make a cutout from based on the cutout parameters
-    image_filename = imgr.match_image(co_args)
-    if (not image_filename):
-        errMsg = "No matching image was not found in images directory {0}".format(IMAGES_DIR)
+    image_filepath = imgr.match_image(co_args)
+    if (not image_filepath):
+        errMsg = "No matching image was not found in images directory"
         current_app.logger.error(errMsg)
         raise exceptions.RequestException(errMsg)
 
     if (not co_args.get('co_size')):        # if no size specified, return the entire image
-        return return_image(image_filename) # exit out now, returning entire image
+        return imgr.return_image(image_filepath) # exit and return entire image
 
-    # compute the image filepath and actually make the cutout
-    image_path = imgr.image_filepath_from_filename(image_filename)
-    hdu = fits.open(image_path)[0]
+    # actually make the cutout
+    hdu = fits.open(image_filepath)[0]
     cutout = make_cutout(hdu, co_args)
 
     # write the cutout to a new FITS file and then return it
-    co_filename = make_cutout_filename(image_filename, cutout, co_args)
+    co_filename = make_cutout_filename(image_filepath, cutout, co_args)
     write_cutout(hdu, co_filename)
 
-    return return_image(co_filename, imageDir=CUTOUTS_DIR) # return the cutout image
+    return return_cutout(co_filename)       # return the image cutout
 
 
-# Make and return an image cutout for a filtered image.
-# The band is specified by the non-optional 'filter' argument.
 @celery.task()
 def get_cutout_by_filter (args):
+    """ Make and return an image cutout for a filtered image.
+        The band is specified by the non-optional 'filter' argument. """
+
     # parse the parameters for the cutout
     co_args = parse_cutout_args(args, filterRequired=True)
 
     # figure out which image to make a cutout from based on the cutout parameters
     filt = co_args.get('filter')
-    image_filename = imgr.match_image(co_args, match_fn=imgr.by_filter_matcher)
-    if (not image_filename):
-        errMsg = "An image was not found for filter {0} in images directory {1}".format(filt, IMAGES_DIR)
+    image_filepath = imgr.match_image(co_args, match_fn=imgr.by_filter_matcher)
+    if (not image_filepath):
+        errMsg = "An image was not found for filter {0} in images directory".format(filt)
         current_app.logger.error(errMsg)
         raise exceptions.RequestException(errMsg)
 
     if (not co_args.get('co_size')):        # if no size specified, return the entire image
-        return return_image(image_filename) # exit out now, returning entire image
+        return imgr.return_image(image_filepath) # exit and return entire image
 
-    # compute the image filepath and actually make the cutout
-    image_path = imgr.image_filepath_from_filename(image_filename)
-    hdu = fits.open(image_path)[0]
+    # actually make the cutout
+    hdu = fits.open(image_filepath)[0]
     cutout = make_cutout(hdu, co_args)
 
     # write the cutout to a new FITS file and then return it
-    co_filename = make_cutout_filename(image_filename, cutout, co_args)
+    co_filename = make_cutout_filename(image_filepath, cutout, co_args)
     write_cutout(hdu, co_filename)
 
-    return return_image(co_filename, imageDir=CUTOUTS_DIR) # return the cutout image
+    return return_cutout(co_filename)       # return the cutout image
 
 
 @celery.task()
@@ -134,8 +146,8 @@ def show_cache (args):
 # Internal helper methods
 #
 
-# Make and return an image cutout for the given image, based on the given cutout parameters.
 def make_cutout (hdu, co_args):
+    """ Make and return an image cutout for the given image, based on the given cutout parameters. """
     wcs = WCS(hdu.header)
 
     # make the cutout and update its WCS info
@@ -155,21 +167,21 @@ def make_cutout (hdu, co_args):
     return cutout
 
 
-# Return a filename for the Astropy cutout from info in the given parameters
-def make_cutout_filename (image_path, cutout, co_args):
-    baseName = os.path.splitext(os.path.basename(image_path))[0]
+def make_cutout_filename (image_filepath, cutout, co_args):
+    """ Return a filename for the Astropy cutout from info in the given parameters. """
+    baseName = os.path.splitext(os.path.basename(image_filepath))[0]
     ra = co_args['ra']
     dec = co_args['dec']
     shape = cutout.shape
     return "{0}__{1}_{2}_{3}x{4}.fits".format(baseName, ra, dec, shape[0], shape[1])
 
 
-# Parse, convert, and check the given coordinate arguments, returning a dictionary of
-# coordinate arguments.
 def parse_coordinate_args (args):
+    """ Parse, convert, and check the given coordinate arguments, returning a dictionary
+        of coordinate arguments. """
     co_args = {}
 
-    raStr = args.get("ra")
+    raStr = args.get('ra')
     if (not raStr):
         errMsg = "Right ascension must be specified, via the 'ra' argument"
         current_app.logger.error(errMsg)
@@ -178,7 +190,7 @@ def parse_coordinate_args (args):
         ra = float(raStr)
         co_args['ra'] = ra
 
-    decStr = args.get("dec")
+    decStr = args.get('dec')
     if (not decStr):
         errMsg = "Declination must be specified, via the 'dec' argument"
         current_app.logger.error(errMsg)
@@ -187,19 +199,34 @@ def parse_coordinate_args (args):
         dec = float(decStr)
         co_args['dec'] = dec
 
-    co_args['center'] = SkyCoord(ra=ra*u.degree, dec=dec*u.degree, frame='icrs')
+    frame = args.get('frame', 'icrs')       # get optional coordinate reference system
+
+    co_args['center'] = SkyCoord(ra=ra*u.degree, dec=dec*u.degree, frame=frame)
 
     return co_args                          # return parsed, converted cutout arguments
 
 
-# Parse, convert, and check the given arguments, returning a dictionary of cutout arguments.
-# Any arguments needed by cutout routines should be passed through to the return dictionary.
+def parse_collection_arg (args):
+    """ Return a (possibly empty) dictionary containing the collection argument. """
+    coll = args.get('collection')
+    if (coll):
+        return { 'collection': coll }
+    else:
+        return {}
+
+
 def parse_cutout_args (args, filterRequired=False):
+    """ Parse, convert, and check the given arguments, returning a dictionary
+        of cutout arguments. Any arguments needed by cutout routines should be passed
+        through to the return dictionary.
+    """
     co_args = parse_cutout_size(args)       # begin by getting cutout size parameters
 
     co_args.update(parse_coordinate_args(args)) # add coordinate parameters
 
-    filt = args.get("filter")
+    co_args.update(parse_collection_arg(args)) # add collection parameter
+
+    filt = args.get('filter')
     if (filt):
         co_args['filter'] = filt
     else:
@@ -211,15 +238,15 @@ def parse_cutout_args (args, filterRequired=False):
     return co_args                          # return parsed, converted cutout arguments
 
 
-# Parse, convert, and check the given cutout size arguments, return a dictionary of
-# the size arguments. No returned cutout size signals that the whole image is desired.
 def parse_cutout_size (args):
+    """ Parse, convert, and check the given cutout size arguments, return a dictionary of
+        the size arguments. No returned cutout size signals that the whole image is desired. """
     co_args = {}                            # dictionary to hold parsed fields
 
     # read and parse a size specification in arc minutes or degrees
-    sizeArcMinStr = args.get("sizeArcMin")
-    sizeDegStr = args.get("sizeDeg")
-    sizeArcSecStr = args.get("sizeArcSec")
+    sizeArcMinStr = args.get('sizeArcMin')
+    sizeDegStr = args.get('sizeDeg')
+    sizeArcSecStr = args.get('sizeArcSec')
 
     if (sizeArcMinStr):                     # prefer units in arc minutes
         co_args['units'] = u.arcmin
@@ -243,18 +270,18 @@ def parse_cutout_size (args):
     return co_args                          # return parsed, converted cutout arguments
 
 
-# Send the specified image file, from the specified directory,
-# back to the caller, giving it the specified MIME type.
-def return_image (filename, imageDir=IMAGES_DIR, mimetype=FITS_MIME_TYPE):
-    if (imgr.is_fits_file(filename, imageDir)):
-        return send_from_directory(imageDir, filename, mimetype=mimetype,
-                                   as_attachment=True, attachment_filename=filename)
-    errMsg = "Specified image file {0} not found in directory {1}".format(filename, imageDir)
+def return_cutout (co_filename, mimetype=FITS_MIME_TYPE):
+    """ Return the named cutout file, giving it the specified MIME type. """
+    co_filepath = os.path.join(CUTOUTS_DIR, co_filename)
+    if (imgr.fits_file_exists(co_filepath)):
+        return send_from_directory(CUTOUTS_DIR, co_filename, mimetype=mimetype,
+                                   as_attachment=True, attachment_filename=co_filename)
+    errMsg = "Specified image cutout file '{0}' not found in cutouts directory".format(co_filename)
     current_app.logger.error(errMsg)
     raise exceptions.ImageNotFound(errMsg)
 
 
-# Write the contents of the given HDU to the specified file in the cutouts directory.
-def write_cutout (hdu, co_filename, imageDir=CUTOUTS_DIR, overwrite=True):
-    co_filepath = imgr.image_filepath_from_filename(co_filename, imageDir=imageDir)
+def write_cutout (hdu, co_filename, overwrite=True):
+    """ Write the contents of the given HDU to the named file in the cutouts directory. """
+    co_filepath = os.path.join(CUTOUTS_DIR, co_filename)
     hdu.writeto(co_filepath, overwrite=True)

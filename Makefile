@@ -1,7 +1,8 @@
 ENVLOC=/etc/trhenv
 IMG=cuts:devel
+IMGS=${PWD}/images
 STACK=vos
-NAME=vos_cuts_1
+NAME=dev_cuts
 
 .PHONY: help clean docker down exec run stop up watch
 
@@ -25,7 +26,7 @@ clean:
 	rm -rf cuts/blueprints/pages/__pycache__
 	rm -rf cuts/static/__pycache__
 
-docker:
+docker: clean
 	docker build -t ${IMG} .
 
 down:
@@ -40,7 +41,7 @@ exec:
 	docker exec -it ${NAME} bash
 
 run:
-	docker run -d --rm --name ${NAME} -p 8000:8000 -v ${PWD}/images:/vos/images:ro ${IMG}
+	docker run -d --rm --name ${NAME} -p 8000:8000 -v ${IMGS}:/vos/images:ro ${IMG}
 
 stop:
 	docker stop ${NAME}
