@@ -1,18 +1,17 @@
 #
 # Module to provide general utility functions for Astrolabe code.
 #   Written by: Tom Hicks. 7/26/2018.
-#   Last Modified: Add default FITS extensions, use in is_fits_filename test.
+#   Last Modified: Corrections from test suite.
 #
 import fnmatch
 import os
-import pathlib as pl
 
 # patterns for identifying FITS and gzipped FITS files
 _FITS_PAT = "*.fits"
 _GZFITS_PAT = "*.fits.gz"
 
 # suffixes for identifying FITS and gzipped FITS files
-_FITS_EXTENTS = [ 'fits', 'fits.gz' ]
+_FITS_EXTENTS = [ '.fits', '.fits.gz' ]
 
 
 def is_fits_file (fyl):
@@ -34,7 +33,11 @@ def gen_file_paths (root_dir):
 
 
 def get_metadata_keys (options):
-    """ Return a list of metadata keys to be extracted. """
+    """
+    Return a list of metadata keys to be extracted.
+
+    throws FileNotFoundError is given a non-existant or unreadable filepath.
+    """
     keyfile = options.get("keyfile")
     if (keyfile):
         with open(keyfile, "r") as mdkeys_file:
@@ -45,5 +48,5 @@ def get_metadata_keys (options):
 
 def path_has_dots (apath):
     """ Tell whether the given path contains '.' or '..' """
-    parts = list(pl.PurePath(apath).parts)
-    return ((apath == ".") or (".." in parts) or ("." in parts))
+    pieces = apath.split(os.sep)
+    return (('.' in pieces) or ('..' in pieces))
