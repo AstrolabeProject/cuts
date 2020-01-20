@@ -6,7 +6,6 @@ import pytest
 
 class TestUtils(object):
 
-
     def test_is_fits_file(self):
         assert utils.is_fits_file('m13.fits') == True
         assert utils.is_fits_file('m13.fits.gz') == True
@@ -48,10 +47,10 @@ class TestUtils(object):
         assert utils.get_metadata_keys({'keymissing': True}) == None
         assert utils.get_metadata_keys({'keyfile': None}) == None
 
-        mdkeys = utils.get_metadata_keys({'keyfile': '/cuts/cuts/tests/resources/empty.txt'})
+        mdkeys = utils.get_metadata_keys({'keyfile': '/cuts/tests/resources/empty.txt'})
         assert len(mdkeys) == 0
 
-        mdkeys = utils.get_metadata_keys({'keyfile': '/cuts/cuts/tests/resources/mdkeys.txt'})
+        mdkeys = utils.get_metadata_keys({'keyfile': '/cuts/tests/resources/mdkeys.txt'})
         assert len(mdkeys) == 13
 
         with pytest.raises(FileNotFoundError):
