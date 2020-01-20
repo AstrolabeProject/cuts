@@ -8,16 +8,17 @@ NAME=dev_cuts
 
 help:
 	@echo "Make what? Try: clean, docker, down, exec, run, stop, up, watch"
-	@echo '    where: help    - show this help message'
-	@echo '           clean   - remove all cache files'
-	@echo '           docker  - build a Flask/Gunicorn server container image'
-	@echo '           down    - stop a Cuts server stack'
-	@echo '           exec    - exec into running Flask server (CLI arg: NAME=containerID)'
-	@echo '           run     - start a standalone Flask server container (for testing)'
-	@echo '           stop    - stop a running standalone Flask server container'
-	@echo '           test    - run all tests in a standalone Flask server container'
-	@echo '           up      - start a Cuts server stack (for development)'
-	@echo '           watch   - show logfile for a running Flask server container'
+	@echo '    where: help     - show this help message'
+	@echo '           clean    - remove all cache files'
+	@echo '           docker   - build a Flask/Gunicorn server container image'
+	@echo '           down     - stop a Cuts server stack'
+	@echo '           exec     - exec into running Flask server (CLI arg: NAME=containerID)'
+	@echo '           run      - start a standalone Flask server container (for testing)'
+	@echo '           stop     - stop a running standalone Flask server container'
+	@echo '           test     - exec all tests in the running standalone Flask server container'
+	@echo '           test-cov - exec tests and report test coverage'
+	@echo '           up       - start a Cuts server stack (for development)'
+	@echo '           watch    - show logfile for a running Flask server container'
 
 clean:
 	rm -rf config/__pycache__
@@ -36,7 +37,6 @@ down:
 up:
 	docker stack deploy -c docker-compose.yml ${STACK}
 
-
 exec:
 	docker cp .bash_env ${NAME}:${ENVLOC}
 	docker exec -it ${NAME} bash
@@ -46,6 +46,9 @@ run:
 
 test:
 	docker exec -it ${NAME} py.test cuts/tests
+
+test-cov:
+	docker exec -it ${NAME} py.test --cov-report term-missing --cov cuts
 
 stop:
 	docker stop ${NAME}
