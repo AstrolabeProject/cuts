@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Allow coordinate reference system in coordinate arguments.
+#   Last Modified: Make corrections from test suite.
 #
 import os
 import pathlib as pl
@@ -26,7 +26,7 @@ IMAGE_MD_CACHE = {}
 
 def clear_cache ():
     """ Clear all entries in the metadata cache. """
-    IMAGE_MD_CACHE = {}
+    IMAGE_MD_CACHE.clear()
     # current_app.logger.error("(clear_cache): CACHE: {}".format(IMAGE_MD_CACHE))
 
 
@@ -55,14 +55,15 @@ def refresh_cache ():
 def by_filter_matcher (co_args, metadata):
     """ A matching function to match images with filters by cutout argument 'filter'.
         Returns boolean if image metadata filter matches cutout argument filter. """
-    co_filt = co_args.get('filter')
-    md_filt = metadata.get('filter')
+    co_filt = co_args.get('filter', False)
+    md_filt = metadata.get('filter', False)
     return (co_filt and md_filt and (co_filt == md_filt))
 
 
 def cache_key_from_metadata (metadata):
-    """ Return the cache key for an entry from the given metadata. """
-    return metadata.get('filepath')
+    """ Return the cache key for an entry from the given metadata or None, if unable to. """
+    cache_key = metadata.get('filepath')
+    return cache_key if cache_key else None  # all 'falsey' entries mapped to failure
 
 
 def collection_from_dirpath (dirpath):
@@ -224,10 +225,14 @@ def metadata_contains (metadata, position):
         return False
 
 
-def put_metadata (filepath, md):
+def put_metadata (md):
     """ Put the given metadata into the cache, keyed by the cache_key computed from the metadata. """
     cache_key = cache_key_from_metadata(md)
-    IMAGE_MD_CACHE[cache_key] = md
+    if (cache_key):
+        IMAGE_MD_CACHE[cache_key] = md
+    else:
+        errMsg = "Unable to get image cache key from metadata: {0}".format(md)
+        current_app.logger.error(errMsg)
 
 
 def return_image (filepath, collection=None, mimetype=FITS_MIME_TYPE):
@@ -256,7 +261,7 @@ def store_metadata (filepath):
         if (is_image_header(hdr)):
             md = extract_metadata(filepath, header=hdr)
             if (md):
-                put_metadata(filepath, md)
+                put_metadata(md)
             return md
         else:
             return None

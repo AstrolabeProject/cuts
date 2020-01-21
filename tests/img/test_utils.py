@@ -1,7 +1,7 @@
 import cuts.blueprints.img.utils as utils
 
 import os
-import sys
+# import sys
 import pytest
 
 class TestUtils(object):
