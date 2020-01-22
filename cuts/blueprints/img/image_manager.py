@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Make corrections from test suite.
+#   Last Modified: More corrections from test suite.
 #
 import os
 import pathlib as pl
@@ -169,7 +169,10 @@ def image_dir_from_collection (collection=None, image_dir=IMAGES_DIR):
 
 def is_image_file (filepath):
     """ Tell whether the given FITS file contains an image or not. """
-    return is_image_header(fits.getheader(filepath))
+    try:
+        return is_image_header(fits.getheader(filepath))
+    except:
+        return False
 
 
 def is_image_header (header):

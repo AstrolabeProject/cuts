@@ -1,0 +1,35 @@
+================================================================================
+FITS header number 1 at block number 1.
+--------------------------------------------------------------------------------
+SIMPLE  =                    T / file does conform to FITS standard
+BITPIX  =                   16 / number of bits per data pixel
+NAXIS   =                    2 / number of data axes
+NAXIS1  =                  300 / length of data axis 1
+NAXIS2  =                  300 / length of data axis 2
+EXTEND  =                    T / FITS dataset may contain extensions
+COMMENT   FITS (Flexible Image Transport System) format is defined in 'Astronomy
+COMMENT   and Astrophysics', volume 376, page 359; bibcode: 2001A&A...376..359H
+COMMENT
+COMMENT This file was produced by the SkyView survey analysis system from
+COMMENT available astronomical surveys.  The data are formatted
+COMMENT as a simple two-dimensional FITS image with the same units as
+COMMENT the orginal survey.
+CTYPE1  = 'RA---TAN'           / X-axis type
+CTYPE2  = 'DEC--TAN'           / Y-axis type
+CRVAL1  =             250.4226 / Reference pixel value
+CRVAL2  =              36.4602 / Reference pixel value
+CRPIX1  =              150.500 / Reference pixel
+CRPIX2  =              150.500 / Reference pixel
+CDELT1  =       -0.00027770002 / Degrees/pixel
+CDELT2  =        0.00027770002 / Degrees/pixel
+CROTA1  =              0.00000 / Rotation in degrees.
+EQUINOX =              2000.00 /Equinox of coordinates
+CHECKSUM= '2f4R3c4O2c4O2c4O'   / HDU checksum updated 2006-11-15T17:18:55
+DATASUM = '1803906202'         / data unit checksum updated 2006-11-15T17:18:55
+END
+--------------------------------------------------------------------------------
+Data section number 1 beginning at block number 2.
+Skipped 63 blocks of data of size 2880 bytes (181440 bytes).
+================================================================================
+End-of-file after 1 HDU in 64 x 2880-byte blocks (184320 bytes).
+--------------------------------------------------------------------------------

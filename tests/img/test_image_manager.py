@@ -4,7 +4,12 @@ import pytest
 import cuts.blueprints.img.image_manager as imgr
 from config.settings import FITS_MIME_TYPE, IMAGES_DIR, IMAGE_EXTS
 
-class TestUtils(object):
+class TestImageManager(object):
+
+    m13 = 'tests/resources/pics/m13.fits'
+    m13_hdr = 'tests/resources/pics/hdr-m13.txt'
+    hh = 'tests/resources/pics/JADES/images/HorseHead.fits'
+    hh_hdr = 'tests/resources/pics/JADES/images/hdr-HorseHead.txt'
 
     def test_clear_cache(self):
         imgr.initialize_cache()
@@ -58,6 +63,7 @@ class TestUtils(object):
         assert imgr.collection_from_dirpath(os.path.join(IMAGES_DIR, '/')) == ''
         assert imgr.collection_from_dirpath(os.path.join(IMAGES_DIR, '/x')) == ''
         assert imgr.collection_from_dirpath(os.path.join(IMAGES_DIR, '/x/y/z/')) == ''
+
         assert imgr.collection_from_dirpath(os.path.join(IMAGES_DIR, 'x')) == 'x'
         assert imgr.collection_from_dirpath(os.path.join(IMAGES_DIR, 'xx/yyy')) == 'xx/yyy'
         assert imgr.collection_from_dirpath(os.path.join(IMAGES_DIR, 'x/y/z')) == 'x/y/z'
@@ -65,27 +71,53 @@ class TestUtils(object):
 
 
     def test_collection_from_filepath(self):
-        return True
+        assert imgr.collection_from_filepath('') == ''
+        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, '/')) == ''
+        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, '/x')) == ''
+        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, '/x/y/z/')) == ''
+        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, 'x')) == ''
+        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, 'file.fits')) == ''
+
+        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, 'xx/yyy')) == 'xx'
+        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, 'x/y/z')) == 'x/y'
+        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, 'x/y/z/')) == 'x/y'
+        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, 'xx/yyy.fits')) == 'xx'
+        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, 'x/y/z.fits')) == 'x/y'
+        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, 'x/y/z.fits/')) == 'x/y'
 
 
     def test_extract_metadata(self):
-        return True
+        md = imgr.extract_metadata(self.m13)
+        assert len(md) != 0
+        assert ('center' in md)
+        assert (not 'collection' in md)
+        assert ('corners' in md)
+        assert (not 'filter' in md)
+        assert (md.get('filepath') == self.m13)
+        assert ('timestamp' in md)
+        assert ('wcs' in md)
 
 
     def test_fetch_metadata(self):
-        return True
+        assert True
 
 
     def test_fits_file_exists(self):
-        return True
+        assert imgr.fits_file_exists('tests/resources/pics') == False
+        assert imgr.fits_file_exists('tests/resources/NOSUCHFILE') == False
+        assert imgr.fits_file_exists(self.m13_hdr) == False
+        assert imgr.fits_file_exists(self.hh_hdr) == False
+
+        assert imgr.fits_file_exists(self.m13) == True
+        assert imgr.fits_file_exists(self.hh) == True
 
 
     def test_gen_collection_names(self):
-        return True
+        assert True
 
 
     def test_get_metadata(self):
-        return True
+        assert True
 
 
     def test_image_dir_from_collection(self):
@@ -107,32 +139,35 @@ class TestUtils(object):
 
 
     def test_is_image_file(self):
-        return True
+        # these tests also directly test is_image_header
+        assert imgr.is_image_file('tests/resources/pics') == False
+        assert imgr.is_image_file('tests/resources/NOSUCHFILE') == False
+        assert imgr.is_image_file(self.m13_hdr) == False
+        assert imgr.is_image_file(self.hh_hdr) == False
 
-
-    def test_is_image_header(self):
-        return True
+        assert imgr.is_image_file(self.m13) == True
+        assert imgr.is_image_file(self.hh) == True
 
 
     def test_list_collections(self):
-        return True
+        assert True
 
 
     def test_list_fits_paths(self):
-        return True
+        assert True
 
 
     def test_metadata_contains(self):
-        return True
+        assert True
 
 
     def test_put_metadata(self):
-        return True
+        assert True
 
 
     def test_return_image(self):
-        return True
+        assert True
 
 
     def test_store_metadata(self):
-        return True
+        assert True
