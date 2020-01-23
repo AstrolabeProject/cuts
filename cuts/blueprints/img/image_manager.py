@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: More corrections from test suite.
+#   Last Modified: Enhancements from test suite.
 #
 import os
 import pathlib as pl
@@ -66,23 +66,23 @@ def cache_key_from_metadata (metadata):
     return cache_key if cache_key else None  # all 'falsey' entries mapped to failure
 
 
-def collection_from_dirpath (dirpath):
+def collection_from_dirpath (dirpath, image_dir=IMAGES_DIR):
     """ Return a collection name string, or the empty string, from the given directory path.
-        The given directory path must be a subpath of the current images root directory.
+        The given directory path must be a subpath of the specified images root directory.
     """
     try:
-        rpath = pl.PurePath(dirpath).relative_to(IMAGES_DIR) # remove the images root directory
+        rpath = pl.PurePath(dirpath).relative_to(image_dir) # remove the images root directory
     except ValueError:
         return ''
     return os.sep.join(list(rpath.parts))
 
 
-def collection_from_filepath (filepath):
+def collection_from_filepath (filepath, image_dir=IMAGES_DIR):
     """ Return a collection name string, or the empty string, from the given filepath.
-        The given filepath must be a subpath of the current images root directory.
+        The given filepath must be a subpath of the specified images root directory.
     """
     try:
-        rpath = pl.PurePath(filepath).relative_to(IMAGES_DIR) # remove the images root directory
+        rpath = pl.PurePath(filepath).relative_to(image_dir) # remove the images root directory
     except ValueError:
         return ''
     coll_parts = list(rpath.parts)[:-1]     # drop the filename
@@ -137,7 +137,7 @@ def gen_collection_names (image_dir=IMAGES_DIR):
     """ Generator to yield all collection names: subdirectories of the images root directory. """
     # (_, dirs, _) = next(os.walk(IMAGES_DIR, followlinks=True)) # this does depth 1 only
     for dirpath, _, _ in os.walk(image_dir, followlinks=True):
-        dir_path = collection_from_dirpath(dirpath)
+        dir_path = collection_from_dirpath(dirpath, image_dir)
         if (dir_path):                      # skip empty entries
             yield dir_path
 
