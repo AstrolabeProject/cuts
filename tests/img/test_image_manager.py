@@ -6,6 +6,7 @@ from config.settings import FITS_MIME_TYPE, IMAGES_DIR, IMAGE_EXTS
 
 class TestImageManager(object):
 
+    imgdir = 'tests/resources/pics'
     m13 = 'tests/resources/pics/m13.fits'
     m13_hdr = 'tests/resources/pics/hdr-m13.txt'
     hh = 'tests/resources/pics/JADES/images/HorseHead.fits'
@@ -59,31 +60,83 @@ class TestImageManager(object):
 
 
     def test_collection_from_dirpath(self):
+        IMD = IMAGES_DIR
         assert imgr.collection_from_dirpath('') == ''
-        assert imgr.collection_from_dirpath(os.path.join(IMAGES_DIR, '/')) == ''
-        assert imgr.collection_from_dirpath(os.path.join(IMAGES_DIR, '/x')) == ''
-        assert imgr.collection_from_dirpath(os.path.join(IMAGES_DIR, '/x/y/z/')) == ''
+        assert imgr.collection_from_dirpath(os.path.join(IMD, '/')) == ''
+        assert imgr.collection_from_dirpath(os.path.join(IMD, '/x')) == ''
+        assert imgr.collection_from_dirpath(os.path.join(IMD, '/x/y/z/')) == ''
 
-        assert imgr.collection_from_dirpath(os.path.join(IMAGES_DIR, 'x')) == 'x'
-        assert imgr.collection_from_dirpath(os.path.join(IMAGES_DIR, 'xx/yyy')) == 'xx/yyy'
-        assert imgr.collection_from_dirpath(os.path.join(IMAGES_DIR, 'x/y/z')) == 'x/y/z'
-        assert imgr.collection_from_dirpath(os.path.join(IMAGES_DIR, 'x/y/z/')) == 'x/y/z'
+        assert imgr.collection_from_dirpath(os.path.join(IMD, 'x')) == 'x'
+        assert imgr.collection_from_dirpath(os.path.join(IMD, 'xx/yyy')) == 'xx/yyy'
+        assert imgr.collection_from_dirpath(os.path.join(IMD, 'x/y/z')) == 'x/y/z'
+        assert imgr.collection_from_dirpath(os.path.join(IMD, 'x/y/z/')) == 'x/y/z'
+
+        assert imgr.collection_from_dirpath('', IMD) == ''
+        assert imgr.collection_from_dirpath(os.path.join(IMD, '/'), IMD) == ''
+        assert imgr.collection_from_dirpath(os.path.join(IMD, '/x'), IMD) == ''
+        assert imgr.collection_from_dirpath(os.path.join(IMD, '/x/y/z/'), IMD) == ''
+
+        assert imgr.collection_from_dirpath(os.path.join(IMD, 'x'), IMD) == 'x'
+        assert imgr.collection_from_dirpath(os.path.join(IMD, 'xx/yyy'), IMD) == 'xx/yyy'
+        assert imgr.collection_from_dirpath(os.path.join(IMD, 'x/y/z'), IMD) == 'x/y/z'
+        assert imgr.collection_from_dirpath(os.path.join(IMD, 'x/y/z/'), IMD) == 'x/y/z'
+
+        IMD = self.imgdir
+        assert imgr.collection_from_dirpath('', IMD) == ''
+        assert imgr.collection_from_dirpath(os.path.join(IMD, '/'), IMD) == ''
+        assert imgr.collection_from_dirpath(os.path.join(IMD, '/x'), IMD) == ''
+        assert imgr.collection_from_dirpath(os.path.join(IMD, '/x/y/z/'), IMD) == ''
+
+        assert imgr.collection_from_dirpath(os.path.join(IMD, 'x'), IMD) == 'x'
+        assert imgr.collection_from_dirpath(os.path.join(IMD, 'xx/yyy'), IMD) == 'xx/yyy'
+        assert imgr.collection_from_dirpath(os.path.join(IMD, 'x/y/z'), IMD) == 'x/y/z'
+        assert imgr.collection_from_dirpath(os.path.join(IMD, 'x/y/z/'), IMD) == 'x/y/z'
 
 
     def test_collection_from_filepath(self):
+        IMD = IMAGES_DIR
         assert imgr.collection_from_filepath('') == ''
-        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, '/')) == ''
-        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, '/x')) == ''
-        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, '/x/y/z/')) == ''
-        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, 'x')) == ''
-        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, 'file.fits')) == ''
+        assert imgr.collection_from_filepath(os.path.join(IMD, '/')) == ''
+        assert imgr.collection_from_filepath(os.path.join(IMD, '/x')) == ''
+        assert imgr.collection_from_filepath(os.path.join(IMD, '/x/y/z/')) == ''
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'x')) == ''
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'file.fits')) == ''
 
-        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, 'xx/yyy')) == 'xx'
-        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, 'x/y/z')) == 'x/y'
-        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, 'x/y/z/')) == 'x/y'
-        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, 'xx/yyy.fits')) == 'xx'
-        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, 'x/y/z.fits')) == 'x/y'
-        assert imgr.collection_from_filepath(os.path.join(IMAGES_DIR, 'x/y/z.fits/')) == 'x/y'
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'xx/yyy')) == 'xx'
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'x/y/z')) == 'x/y'
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'x/y/z/')) == 'x/y'
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'xx/yyy.fits')) == 'xx'
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'x/y/z.fits')) == 'x/y'
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'x/y/z.fits/')) == 'x/y'
+
+        assert imgr.collection_from_filepath('', IMD) == ''
+        assert imgr.collection_from_filepath(os.path.join(IMD, '/'), IMD) == ''
+        assert imgr.collection_from_filepath(os.path.join(IMD, '/x'), IMD) == ''
+        assert imgr.collection_from_filepath(os.path.join(IMD, '/x/y/z/'), IMD) == ''
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'x'), IMD) == ''
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'file.fits'), IMD) == ''
+
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'xx/yyy'), IMD) == 'xx'
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'x/y/z'), IMD) == 'x/y'
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'x/y/z/'), IMD) == 'x/y'
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'xx/yyy.fits'), IMD) == 'xx'
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'x/y/z.fits'), IMD) == 'x/y'
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'x/y/z.fits/'), IMD) == 'x/y'
+
+        IMD = self.imgdir
+        assert imgr.collection_from_filepath('', IMD) == ''
+        assert imgr.collection_from_filepath(os.path.join(IMD, '/'), IMD) == ''
+        assert imgr.collection_from_filepath(os.path.join(IMD, '/x'), IMD) == ''
+        assert imgr.collection_from_filepath(os.path.join(IMD, '/x/y/z/'), IMD) == ''
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'x'), IMD) == ''
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'file.fits'), IMD) == ''
+
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'xx/yyy'), IMD) == 'xx'
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'x/y/z'), IMD) == 'x/y'
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'x/y/z/'), IMD) == 'x/y'
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'xx/yyy.fits'), IMD) == 'xx'
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'x/y/z.fits'), IMD) == 'x/y'
+        assert imgr.collection_from_filepath(os.path.join(IMD, 'x/y/z.fits/'), IMD) == 'x/y'
 
 
     def test_extract_metadata(self):
@@ -113,11 +166,29 @@ class TestImageManager(object):
 
 
     def test_gen_collection_names(self):
-        assert True
+        cnames = [ coll for coll in imgr.gen_collection_names() ]
+        assert len(cnames) > 0
+        assert ('JADES' in cnames)
+        assert ('JADES/SubDir' in cnames)
+        assert ('DC_191217' in cnames)
+
+        cnames = [ coll for coll in imgr.gen_collection_names(image_dir=self.imgdir) ]
+        assert len(cnames) > 0
+        assert ('JADES/images' in cnames)
 
 
     def test_get_metadata(self):
-        assert True
+        imgr.refresh_cache()
+        hhpath = os.path.join(IMAGES_DIR, 'HorseHead.fits')
+        md = imgr.get_metadata(hhpath)
+        assert len(md) != 0
+        assert ('center' in md)
+        assert (not 'collection' in md)
+        assert ('corners' in md)
+        assert ('filter' in md)
+        assert (md.get('filepath') == hhpath)
+        assert ('timestamp' in md)
+        assert ('wcs' in md)
 
 
     def test_image_dir_from_collection(self):
@@ -139,7 +210,7 @@ class TestImageManager(object):
 
 
     def test_is_image_file(self):
-        # these tests also directly test is_image_header
+        # this also directly tests is_image_header
         assert imgr.is_image_file('tests/resources/pics') == False
         assert imgr.is_image_file('tests/resources/NOSUCHFILE') == False
         assert imgr.is_image_file(self.m13_hdr) == False
@@ -150,7 +221,10 @@ class TestImageManager(object):
 
 
     def test_list_collections(self):
-        assert True
+        # this also directly tests gen_collection_names
+        coll = imgr.list_collections()
+        assert len(coll) > 0
+        assert 'JADES' in coll
 
 
     def test_list_fits_paths(self):
