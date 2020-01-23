@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Enhancements from test suite.
+#   Last Modified: Updates from test suite.
 #
 import os
 import pathlib as pl
@@ -229,13 +229,17 @@ def metadata_contains (metadata, position):
 
 
 def put_metadata (md):
-    """ Put the given metadata into the cache, keyed by the cache_key computed from the metadata. """
+    """ Put the given metadata into the cache, keyed by the cache_key computed from the metadata.
+        Returns a boolean to signal success or failure.
+    """
     cache_key = cache_key_from_metadata(md)
     if (cache_key):
         IMAGE_MD_CACHE[cache_key] = md
+        return True
     else:
         errMsg = "Unable to get image cache key from metadata: {0}".format(md)
         current_app.logger.error(errMsg)
+        return False
 
 
 def return_image (filepath, collection=None, mimetype=FITS_MIME_TYPE):

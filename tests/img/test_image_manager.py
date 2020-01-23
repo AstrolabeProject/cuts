@@ -12,6 +12,15 @@ class TestImageManager(object):
     hh = 'tests/resources/pics/JADES/images/HorseHead.fits'
     hh_hdr = 'tests/resources/pics/JADES/images/hdr-HorseHead.txt'
 
+
+    def assert_metadata_valid(self, md, has_keys, has_not_keys, filepath):
+        for key in has_keys:
+            assert (key in md)
+        for key in has_not_keys:
+            assert (not key in md)
+        assert (md.get('filepath') == filepath)
+
+
     def test_clear_cache(self):
         imgr.initialize_cache()
         assert len(imgr.IMAGE_MD_CACHE) != 0
@@ -20,6 +29,7 @@ class TestImageManager(object):
 
 
     def test_initialize_cache(self):
+        # this also directly tests list_fits_paths
         imgr.clear_cache()
         assert len(imgr.IMAGE_MD_CACHE) == 0
         imgr.initialize_cache()
@@ -27,9 +37,12 @@ class TestImageManager(object):
 
 
     def test_refresh_cache(self):
+        # this also directly tests list_fits_paths and get_metadata
         imgr.clear_cache()
         assert len(imgr.IMAGE_MD_CACHE) == 0
-        imgr.refresh_cache()
+        imgr.refresh_cache()                # test initial storage path
+        assert len(imgr.IMAGE_MD_CACHE) != 0
+        imgr.refresh_cache()                # test update storage path
         assert len(imgr.IMAGE_MD_CACHE) != 0
 
 
@@ -141,18 +154,24 @@ class TestImageManager(object):
 
     def test_extract_metadata(self):
         md = imgr.extract_metadata(self.m13)
-        assert len(md) != 0
-        assert ('center' in md)
-        assert (not 'collection' in md)
-        assert ('corners' in md)
-        assert (not 'filter' in md)
-        assert (md.get('filepath') == self.m13)
-        assert ('timestamp' in md)
-        assert ('wcs' in md)
+        # self.assert_m13_metadata_valid(md)  # REMOVE LATER
+        self.assert_metadata_valid(
+            md,                                        # the metadata to test
+            ['center', 'corners', 'timestamp', 'wcs'], # must have these keys
+            ['collection', 'filter'],                  # must not have these keys
+            self.m13)                                  # must match filepath
 
 
     def test_fetch_metadata(self):
-        assert True
+        imgr.clear_cache()
+        assert len(imgr.IMAGE_MD_CACHE) == 0
+        md = imgr.fetch_metadata(self.m13)
+        assert len(imgr.IMAGE_MD_CACHE) == 1
+        self.assert_metadata_valid(
+            md,                                        # the metadata to test
+            ['center', 'corners', 'timestamp', 'wcs'], # must have these keys
+            ['collection', 'filter'],                  # must not have these keys
+            self.m13)                                  # must match filepath
 
 
     def test_fits_file_exists(self):
@@ -181,14 +200,25 @@ class TestImageManager(object):
         imgr.refresh_cache()
         hhpath = os.path.join(IMAGES_DIR, 'HorseHead.fits')
         md = imgr.get_metadata(hhpath)
-        assert len(md) != 0
-        assert ('center' in md)
-        assert (not 'collection' in md)
-        assert ('corners' in md)
-        assert ('filter' in md)
-        assert (md.get('filepath') == hhpath)
-        assert ('timestamp' in md)
-        assert ('wcs' in md)
+        self.assert_metadata_valid(
+            md,                                                  # the metadata to test
+            ['center', 'corners', 'filter', 'timestamp', 'wcs'], # must have these keys
+            ['collection'],                                      # must not have these keys
+            hhpath)                                              # must match filepath
+
+
+    def test_image_contains(self):
+        imgr.image_contains(self.hh, {'ra': '53.16', 'dec': '-27.78'}) == False
+        imgr.image_contains(self.hh, {'ra': '85.274970', 'dec': '-2.458265'}) == True
+        imgr.image_contains(self.hh, {'ra': '85.275000', 'dec': '-2.458300'}) == True
+
+
+    def test_image_corners(self):
+        corners = imgr.image_corners(self.hh)
+        assert len(corners) != 0
+        assert len(corners) == 4
+        for i in range(3):
+            assert len(corners[i]) == 2
 
 
     def test_image_dir_from_collection(self):
@@ -228,15 +258,24 @@ class TestImageManager(object):
 
 
     def test_list_fits_paths(self):
+        # already tested by calling methods
         assert True
 
 
     def test_metadata_contains(self):
-        assert True
+        assert imgr.metadata_contains(None, None) == False
+        assert imgr.metadata_contains({}, []) == False
+        assert imgr.metadata_contains({'no wcs': 'fails'}, []) == False
 
 
-    def test_put_metadata(self):
-        assert True
+    def test_put_metadata(self, app):
+        # valid paths are also tested by calling methods
+        assert imgr.put_metadata({}) == False
+        assert imgr.put_metadata({'no_cache_key': 'fails'}) == False
+
+        assert imgr.put_metadata({'filepath': self.m13}) == True
+        md = { 'filepath': self.hh, 'collection':'Mine', 'filter':'F410M', 'timestamp':42 }
+        assert imgr.put_metadata(md) == True
 
 
     def test_return_image(self):
@@ -244,4 +283,6 @@ class TestImageManager(object):
 
 
     def test_store_metadata(self):
-        assert True
+        # test the problem paths: valid paths are already tested by calling methods
+        assert imgr.store_metadata('NOSUCHFILE') == None
+        assert imgr.store_metadata('tests/resources/NOSUCHFILE') == None
