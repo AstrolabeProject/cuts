@@ -17,6 +17,8 @@ class TestImageManager(object):
     m13_name = 'm13.fits'
     nosuch_file = 'NOSUCHFILE'
     nosuch_path = 'tests/resources/NOSUCHFILE'
+    vos_hh = '/vos/images/HorseHead.fits'
+    vos_hh_deep = '/vos/images/JADES/HorseHead.fits'
     vos_m13 = '/vos/images/m13.fits'
     vos_m13_deep = '/vos/images/JADES/SubDir/m13.fits'
 
@@ -270,6 +272,35 @@ class TestImageManager(object):
     def test_list_fits_paths(self):
         # already tested by calling methods
         assert True
+
+
+    def test_match_image(self, app):
+        bad_args =  { 'ra': '3.14159265', 'dec': '-2.71828' }
+        m13_args =  { 'ra': '250.4200', 'dec': '36.4600' }
+        hh_args =   { 'ra': '85.274970', 'dec': '-2.458265' }
+        jade_args = { 'ra': '53.16', 'dec': '-27.78' }
+
+        assert imgr.match_image(bad_args) == None
+        assert imgr.match_image(bad_args, collection='JADES') == None
+        assert imgr.match_image(hh_args, collection='JADES/SubDir') == None
+
+        m13_match = imgr.match_image(m13_args)
+        assert m13_match == self.vos_m13
+
+        m13_match = imgr.match_image(m13_args, collection='JADES')
+        assert m13_match == self.vos_m13_deep
+
+        m13_match = imgr.match_image(m13_args, collection='JADES/SubDir')
+        assert m13_match == self.vos_m13_deep
+
+        hh_match = imgr.match_image(hh_args)
+        assert hh_match == self.vos_hh
+
+        hh_match = imgr.match_image(hh_args, collection='JADES')
+        assert hh_match == self.vos_hh_deep
+
+        jade_match = imgr.match_image(jade_args)
+        assert jade_match.startswith('/vos/images/JADES')
 
 
     def test_metadata_contains(self):
