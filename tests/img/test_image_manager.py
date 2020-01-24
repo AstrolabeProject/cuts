@@ -303,6 +303,39 @@ class TestImageManager(object):
         assert jade_match.startswith('/vos/images/JADES')
 
 
+    def test_match_image_byfilter(self, app):
+        bad_args =  { 'ra': '3.14159265', 'dec': '-2.71828', 'filter': 'F444W' }
+        m13_args =  { 'ra': '250.4200', 'dec': '36.4600', 'filter': 'F444W'  }
+        hh_args =   { 'ra': '85.274970', 'dec': '-2.458265', 'filter': 'OG590'  }
+        jade_args = { 'ra': '53.16', 'dec': '-27.78', 'filter': 'F444W' }
+
+        assert imgr.match_image(bad_args, match_fn=imgr.by_filter_matcher) == None
+        assert imgr.match_image(bad_args,
+                                collection='JADES',
+                                match_fn=imgr.by_filter_matcher) == None
+
+        assert imgr.match_image(m13_args, match_fn=imgr.by_filter_matcher) == None
+        assert imgr.match_image(m13_args,
+                                collection='JADES',
+                                match_fn=imgr.by_filter_matcher) == None
+        assert imgr.match_image(m13_args,
+                                collection='JADES/SubDir',
+                                match_fn=imgr.by_filter_matcher) == None
+
+        assert imgr.match_image(hh_args,
+                                collection='JADES/SubDir',
+                                match_fn=imgr.by_filter_matcher) == None
+
+        hh_match = imgr.match_image(hh_args, match_fn=imgr.by_filter_matcher)
+        assert hh_match == self.vos_hh
+
+        hh_match = imgr.match_image(hh_args, collection='JADES', match_fn=imgr.by_filter_matcher)
+        assert hh_match == self.vos_hh_deep
+
+        jade_match = imgr.match_image(jade_args, match_fn=imgr.by_filter_matcher)
+        assert jade_match == '/vos/images/JADES/goods_s_F444W_2018_08_31.fits'
+
+
     def test_metadata_contains(self):
         assert imgr.metadata_contains(None, None) == False
         assert imgr.metadata_contains({}, []) == False
