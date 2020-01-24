@@ -2,7 +2,7 @@
 # Module to containing spawnable Celery tasks for the application.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Allow coordinate reference system in coordinate arguments.
+#   Last Modified: Update for collection arg in match image method. Remove parse collection.
 #
 import os
 
@@ -85,9 +85,10 @@ def get_cutout (args):
 
     # parse the parameters for the cutout
     co_args = parse_cutout_args(args)
+    collection = args.get('collection')
 
     # figure out which image to make a cutout from based on the cutout parameters
-    image_filepath = imgr.match_image(co_args)
+    image_filepath = imgr.match_image(co_args, collection=collection)
     if (not image_filepath):
         errMsg = "No matching image was not found in images directory"
         current_app.logger.error(errMsg)
@@ -114,10 +115,11 @@ def get_cutout_by_filter (args):
 
     # parse the parameters for the cutout
     co_args = parse_cutout_args(args, filterRequired=True)
+    collection = args.get('collection')
 
     # figure out which image to make a cutout from based on the cutout parameters
     filt = co_args.get('filter')
-    image_filepath = imgr.match_image(co_args, match_fn=imgr.by_filter_matcher)
+    image_filepath = imgr.match_image(co_args, collection=collection, match_fn=imgr.by_filter_matcher)
     if (not image_filepath):
         errMsg = "An image was not found for filter {0} in images directory".format(filt)
         current_app.logger.error(errMsg)
@@ -206,15 +208,6 @@ def parse_coordinate_args (args):
     return co_args                          # return parsed, converted cutout arguments
 
 
-def parse_collection_arg (args):
-    """ Return a (possibly empty) dictionary containing the collection argument. """
-    coll = args.get('collection')
-    if (coll):
-        return { 'collection': coll }
-    else:
-        return {}
-
-
 def parse_cutout_args (args, filterRequired=False):
     """ Parse, convert, and check the given arguments, returning a dictionary
         of cutout arguments. Any arguments needed by cutout routines should be passed
@@ -223,8 +216,6 @@ def parse_cutout_args (args, filterRequired=False):
     co_args = parse_cutout_size(args)       # begin by getting cutout size parameters
 
     co_args.update(parse_coordinate_args(args)) # add coordinate parameters
-
-    co_args.update(parse_collection_arg(args)) # add collection parameter
 
     filt = args.get('filter')
     if (filt):

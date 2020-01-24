@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Updates from test suite.
+#   Last Modified: Add collection arg to match image method.
 #
 import os
 import pathlib as pl
@@ -192,13 +192,13 @@ def list_fits_paths (collection=None):
     return [ fyl for fyl in utils.gen_file_paths(imageDir) if (utils.is_fits_filename(fyl, IMAGE_EXTS)) ]
 
 
-def match_image (co_args, match_fn=None):
+def match_image (co_args, collection=None, match_fn=None):
     """ Return the filepath of an image, from the specified image directory, which contains
         the specified coordinate arguments and satisfies the (optional) given matching function.
     """
     position = SkyCoord(co_args['ra'], co_args['dec'], unit='deg', frame=co_args.get('frame','icrs'))
 
-    for filepath in list_fits_paths(collection=co_args.get('collection')):
+    for filepath in list_fits_paths(collection=collection):
         md = fetch_metadata(filepath)
         if (not md):                        # if unable to get metadata
             continue                        # then skip this file
