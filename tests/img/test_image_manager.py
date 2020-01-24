@@ -1,16 +1,24 @@
 import os
 import pytest
 
-import cuts.blueprints.img.image_manager as imgr
 from config.settings import FITS_MIME_TYPE, IMAGES_DIR, IMAGE_EXTS
+import cuts.blueprints.img.image_manager as imgr
+from cuts.blueprints.img import exceptions
+
 
 class TestImageManager(object):
 
+    acat = 'tests/resources/cats/small_table.fits'
     imgdir = 'tests/resources/pics'
-    m13 = 'tests/resources/pics/m13.fits'
-    m13_hdr = 'tests/resources/pics/hdr-m13.txt'
     hh = 'tests/resources/pics/JADES/images/HorseHead.fits'
     hh_hdr = 'tests/resources/pics/JADES/images/hdr-HorseHead.txt'
+    m13 = 'tests/resources/pics/m13.fits'
+    m13_hdr = 'tests/resources/pics/hdr-m13.txt'
+    m13_name = 'm13.fits'
+    nosuch_file = 'NOSUCHFILE'
+    nosuch_path = 'tests/resources/NOSUCHFILE'
+    vos_m13 = '/vos/images/m13.fits'
+    vos_m13_deep = '/vos/images/JADES/SubDir/m13.fits'
 
 
     def assert_metadata_valid(self, md, has_keys, has_not_keys, filepath):
@@ -38,7 +46,7 @@ class TestImageManager(object):
 
     def test_refresh_cache(self):
         # this also directly tests list_fits_paths and get_metadata
-        imgr.clear_cache()
+        imgr.clear_cache()                  # start from scratch
         assert len(imgr.IMAGE_MD_CACHE) == 0
         imgr.refresh_cache()                # test initial storage path
         assert len(imgr.IMAGE_MD_CACHE) != 0
@@ -176,12 +184,13 @@ class TestImageManager(object):
 
     def test_fits_file_exists(self):
         assert imgr.fits_file_exists('tests/resources/pics') == False
-        assert imgr.fits_file_exists('tests/resources/NOSUCHFILE') == False
+        assert imgr.fits_file_exists(self.nosuch_path) == False
         assert imgr.fits_file_exists(self.m13_hdr) == False
         assert imgr.fits_file_exists(self.hh_hdr) == False
 
         assert imgr.fits_file_exists(self.m13) == True
         assert imgr.fits_file_exists(self.hh) == True
+        assert imgr.fits_file_exists(self.acat) == True
 
 
     def test_gen_collection_names(self):
@@ -241,8 +250,9 @@ class TestImageManager(object):
 
     def test_is_image_file(self):
         # this also directly tests is_image_header
-        assert imgr.is_image_file('tests/resources/pics') == False
-        assert imgr.is_image_file('tests/resources/NOSUCHFILE') == False
+        assert imgr.is_image_file(self.imgdir) == False
+        assert imgr.is_image_file(self.nosuch_path) == False
+        assert imgr.is_image_file(self.acat) == False
         assert imgr.is_image_file(self.m13_hdr) == False
         assert imgr.is_image_file(self.hh_hdr) == False
 
@@ -278,11 +288,42 @@ class TestImageManager(object):
         assert imgr.put_metadata(md) == True
 
 
-    def test_return_image(self):
-        assert True
+    def test_return_image(self, app, client):
+        with pytest.raises(exceptions.ImageNotFound):
+            imgr.return_image(self.nosuch_path)
+        with pytest.raises(exceptions.ImageNotFound):
+            imgr.return_image(self.nosuch_path, collection='bogus')
+
+        with app.test_request_context():
+            image = imgr.return_image(self.vos_m13)
+            assert image != None
+            assert type(image) == app.response_class
+            assert image.status_code == 200
+            hdrs = image.headers
+            assert hdrs.get('Content-Length') == '184320'
+            assert hdrs.get('Content-Type') == 'image/fits'
+            assert (self.m13_name in hdrs.get('Content-Disposition'))
+
+
+        with app.test_request_context():
+            image = imgr.return_image(self.vos_m13_deep, collection='JADES/SubDir')
+            assert image != None
+            assert type(image) == app.response_class
+            assert image.status_code == 200
+            hdrs = image.headers
+            assert hdrs.get('Content-Length') == '184320'
+            assert hdrs.get('Content-Type') == 'image/fits'
+            assert (self.m13_name in hdrs.get('Content-Disposition'))
+
+
+    def test_show_cache(self):
+        imgr.refresh_cache()
+        rep = imgr.show_cache()
+        assert (rep and len(rep) > 0)
 
 
     def test_store_metadata(self):
         # test the problem paths: valid paths are already tested by calling methods
-        assert imgr.store_metadata('NOSUCHFILE') == None
-        assert imgr.store_metadata('tests/resources/NOSUCHFILE') == None
+        assert imgr.store_metadata(self.nosuch_file) == None
+        assert imgr.store_metadata(self.nosuch_path) == None
+        assert imgr.store_metadata(self.acat) == None
