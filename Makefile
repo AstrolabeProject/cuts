@@ -9,18 +9,18 @@ NAME=dev_cuts
 
 help:
 	@echo "Make what? Try: clean, docker, down, exec, run, stop, up, watch"
-	@echo '    where: help     - show this help message'
-	@echo '           clean    - remove all cache files'
-	@echo '           docker   - build a production server container image'
-	@echo '           dockert  - build a server container image with tests (for testing)'
-	@echo '           down     - stop a Cuts server stack'
-	@echo '           exec     - exec into running Flask server (CLI arg: NAME=containerID)'
-	@echo '           run      - start a standalone Flask server container'
-	@echo '           runt     - start a standalone Flask server container (for testing)'
-	@echo '           stop     - stop a running standalone Flask server container'
-	@echo '           test     - execute all tests in the running standalone Flask server container'
-	@echo '           up       - start a Cuts server stack (for development)'
-	@echo '           watch    - show logfile for a running Flask server container'
+	@echo '    where: help    - show this help message'
+	@echo '           clean   - remove all cache files'
+	@echo '           docker  - build a production Cuts server container image'
+	@echo '           dockert - build a server container image with tests (for testing)'
+	@echo '           down    - stop a running Cuts server stack (for development)'
+	@echo '           exec    - exec into running Cuts server (CLI arg: NAME=containerID)'
+	@echo '           run     - start a standalone Cuts server container (for development)'
+	@echo '           runt    - start a standalone Cuts server container (for testing)'
+	@echo '           stop    - stop a running standalone Cuts server container'
+	@echo '           test    - execute all tests in the running standalone Cuts server container'
+	@echo '           up      - start a Cuts server stack (for development)'
+	@echo '           watch   - show logfile for a running Cuts server container'
 
 clean:
 	rm -rf config/__pycache__
