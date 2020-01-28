@@ -18,8 +18,7 @@ help:
 	@echo '           run      - start a standalone Flask server container'
 	@echo '           runt     - start a standalone Flask server container (for testing)'
 	@echo '           stop     - stop a running standalone Flask server container'
-	@echo '           test     - exec all tests in the running standalone Flask server container'
-	@echo '           test-cov - exec tests and report test coverage'
+	@echo '           test     - execute all tests in the running standalone Flask server container'
 	@echo '           up       - start a Cuts server stack (for development)'
 	@echo '           watch    - show logfile for a running Flask server container'
 
@@ -61,6 +60,3 @@ stop:
 
 watch:
 	docker logs -f ${NAME}
-
-%:
-	@:
