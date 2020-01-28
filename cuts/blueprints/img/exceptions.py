@@ -1,4 +1,3 @@
-from flask import jsonify
 # from werkzeug.exceptions import HTTPException
 
 #class RequestException (HTTPException):

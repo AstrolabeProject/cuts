@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Allow coordinate reference system in coordinate arguments.
+#   Last Modified: Add collection arg to match image method.
 #
 import os
 import pathlib as pl
@@ -26,7 +26,7 @@ IMAGE_MD_CACHE = {}
 
 def clear_cache ():
     """ Clear all entries in the metadata cache. """
-    IMAGE_MD_CACHE = {}
+    IMAGE_MD_CACHE.clear()
     # current_app.logger.error("(clear_cache): CACHE: {}".format(IMAGE_MD_CACHE))
 
 
@@ -55,33 +55,34 @@ def refresh_cache ():
 def by_filter_matcher (co_args, metadata):
     """ A matching function to match images with filters by cutout argument 'filter'.
         Returns boolean if image metadata filter matches cutout argument filter. """
-    co_filt = co_args.get('filter')
-    md_filt = metadata.get('filter')
+    co_filt = co_args.get('filter', False)
+    md_filt = metadata.get('filter', False)
     return (co_filt and md_filt and (co_filt == md_filt))
 
 
 def cache_key_from_metadata (metadata):
-    """ Return the cache key for an entry from the given metadata. """
-    return metadata.get('filepath')
+    """ Return the cache key for an entry from the given metadata or None, if unable to. """
+    cache_key = metadata.get('filepath')
+    return cache_key if cache_key else None  # all 'falsey' entries mapped to failure
 
 
-def collection_from_dirpath (dirpath):
+def collection_from_dirpath (dirpath, image_dir=IMAGES_DIR):
     """ Return a collection name string, or the empty string, from the given directory path.
-        The given directory path must be a subpath of the current images root directory.
+        The given directory path must be a subpath of the specified images root directory.
     """
     try:
-        rpath = pl.PurePath(dirpath).relative_to(IMAGES_DIR) # remove the images root directory
+        rpath = pl.PurePath(dirpath).relative_to(image_dir) # remove the images root directory
     except ValueError:
         return ''
     return os.sep.join(list(rpath.parts))
 
 
-def collection_from_filepath (filepath):
+def collection_from_filepath (filepath, image_dir=IMAGES_DIR):
     """ Return a collection name string, or the empty string, from the given filepath.
-        The given filepath must be a subpath of the current images root directory.
+        The given filepath must be a subpath of the specified images root directory.
     """
     try:
-        rpath = pl.PurePath(filepath).relative_to(IMAGES_DIR) # remove the images root directory
+        rpath = pl.PurePath(filepath).relative_to(image_dir) # remove the images root directory
     except ValueError:
         return ''
     coll_parts = list(rpath.parts)[:-1]     # drop the filename
@@ -136,7 +137,7 @@ def gen_collection_names (image_dir=IMAGES_DIR):
     """ Generator to yield all collection names: subdirectories of the images root directory. """
     # (_, dirs, _) = next(os.walk(IMAGES_DIR, followlinks=True)) # this does depth 1 only
     for dirpath, _, _ in os.walk(image_dir, followlinks=True):
-        dir_path = collection_from_dirpath(dirpath)
+        dir_path = collection_from_dirpath(dirpath, image_dir)
         if (dir_path):                      # skip empty entries
             yield dir_path
 
@@ -168,7 +169,10 @@ def image_dir_from_collection (collection=None, image_dir=IMAGES_DIR):
 
 def is_image_file (filepath):
     """ Tell whether the given FITS file contains an image or not. """
-    return is_image_header(fits.getheader(filepath))
+    try:
+        return is_image_header(fits.getheader(filepath))
+    except:
+        return False
 
 
 def is_image_header (header):
@@ -188,13 +192,13 @@ def list_fits_paths (collection=None):
     return [ fyl for fyl in utils.gen_file_paths(imageDir) if (utils.is_fits_filename(fyl, IMAGE_EXTS)) ]
 
 
-def match_image (co_args, match_fn=None):
+def match_image (co_args, collection=None, match_fn=None):
     """ Return the filepath of an image, from the specified image directory, which contains
         the specified coordinate arguments and satisfies the (optional) given matching function.
     """
     position = SkyCoord(co_args['ra'], co_args['dec'], unit='deg', frame=co_args.get('frame','icrs'))
 
-    for filepath in list_fits_paths(collection=co_args.get('collection')):
+    for filepath in list_fits_paths(collection=collection):
         md = fetch_metadata(filepath)
         if (not md):                        # if unable to get metadata
             continue                        # then skip this file
@@ -224,10 +228,18 @@ def metadata_contains (metadata, position):
         return False
 
 
-def put_metadata (filepath, md):
-    """ Put the given metadata into the cache, keyed by the cache_key computed from the metadata. """
+def put_metadata (md):
+    """ Put the given metadata into the cache, keyed by the cache_key computed from the metadata.
+        Returns a boolean to signal success or failure.
+    """
     cache_key = cache_key_from_metadata(md)
-    IMAGE_MD_CACHE[cache_key] = md
+    if (cache_key):
+        IMAGE_MD_CACHE[cache_key] = md
+        return True
+    else:
+        errMsg = "Unable to get image cache key from metadata: {0}".format(md)
+        current_app.logger.error(errMsg)
+        return False
 
 
 def return_image (filepath, collection=None, mimetype=FITS_MIME_TYPE):
@@ -256,7 +268,7 @@ def store_metadata (filepath):
         if (is_image_header(hdr)):
             md = extract_metadata(filepath, header=hdr)
             if (md):
-                put_metadata(filepath, md)
+                put_metadata(md)
             return md
         else:
             return None

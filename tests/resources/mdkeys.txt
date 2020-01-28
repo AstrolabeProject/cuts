@@ -1,0 +1,13 @@
+CRPIX1
+CRPIX2
+CRVAL1
+CRVAL2
+CTYPE1
+CTYPE2
+DATE
+ORIGIN
+filepath
+right_ascension
+declination
+s_ra
+s_dec
