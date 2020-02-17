@@ -16,9 +16,8 @@ help:
 	@echo '           down    - stop a running Cuts server stack (for development)'
 	@echo '           exec    - exec into running Cuts server (CLI arg: NAME=containerID)'
 	@echo '           run     - start a standalone Cuts server container (for development)'
-	@echo '           runt    - start a standalone Cuts server container (for testing)'
+	@echo '           runtc   - start a standalone Cuts server container (for testing)'
 	@echo '           stop    - stop a running standalone Cuts server container'
-	@echo '           test    - execute all tests in the running standalone Cuts server container'
 	@echo '           up      - start a Cuts server stack (for development)'
 	@echo '           watch   - show logfile for a running Cuts server container'
 
@@ -49,11 +48,10 @@ exec:
 run:
 	docker run -d --rm --name ${NAME} -p 8000:8000 -v ${IMGS}:/vos/images:ro ${IMG}
 
-runt:
+runtc:
 	docker run -d --rm --name ${NAME} -p 8000:8000 -v ${IMGS}:/vos/images:ro ${TSTIMG}
-
-test:
-	docker exec -it ${NAME} py.test --cov-report term-missing --cov /cuts
+	docker exec -it ${NAME} py.test -vv --cov-report term-missing --cov /cuts
+	docker stop ${NAME}
 
 stop:
 	docker stop ${NAME}
