@@ -15,12 +15,14 @@ class TestImageManager(object):
     m13 = 'tests/resources/pics/m13.fits'
     m13_hdr = 'tests/resources/pics/hdr-m13.txt'
     m13_name = 'm13.fits'
+    m13_deep_name = 'm13_2.fits'
     nosuch_file = 'NOSUCHFILE'
     nosuch_path = 'tests/resources/NOSUCHFILE'
     vos_hh = '/vos/images/HorseHead.fits'
     vos_hh_deep = '/vos/images/JADES/HorseHead.fits'
     vos_m13 = '/vos/images/m13.fits'
-    vos_m13_deep = '/vos/images/JADES/SubDir/m13.fits'
+    vos_m13_jades = '/vos/images/JADES/m13.fits'
+    vos_m13_deep = '/vos/images/JADES/SubDir/m13_2.fits'
 
 
     def assert_metadata_valid(self, md, has_keys, has_not_keys, filepath):
@@ -288,7 +290,7 @@ class TestImageManager(object):
         assert m13_match == self.vos_m13
 
         m13_match = imgr.match_image(m13_args, collection='JADES')
-        assert m13_match == self.vos_m13_deep
+        assert m13_match == self.vos_m13_jades
 
         m13_match = imgr.match_image(m13_args, collection='JADES/SubDir')
         assert m13_match == self.vos_m13_deep
@@ -377,7 +379,7 @@ class TestImageManager(object):
             hdrs = image.headers
             assert hdrs.get('Content-Length') == '184320'
             assert hdrs.get('Content-Type') == 'image/fits'
-            assert (self.m13_name in hdrs.get('Content-Disposition'))
+            assert (self.m13_deep_name in hdrs.get('Content-Disposition'))
 
 
     def test_show_cache(self):
