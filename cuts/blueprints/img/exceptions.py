@@ -11,7 +11,8 @@ class RequestException (Exception):
             self.status_code = status_code
 
     def to_dict(self):
-        retdict = dict(self.status_code)
+        retdict = dict()
+        retdict['status_code'] = self.status_code
         retdict['message'] = self.message
         return retdict
 
@@ -30,7 +31,8 @@ class ImageNotFound (Exception):
             self.status_code = status_code
 
     def to_dict(self):
-        retdict = dict(self.status_code)
+        retdict = dict()
+        retdict['status_code'] = self.status_code
         retdict['message'] = self.message
         return retdict
 
@@ -49,7 +51,8 @@ class ServerException (Exception):
             self.status_code = status_code
 
     def to_dict(self):
-        retdict = dict(self.status_code)
+        retdict = dict()
+        retdict['status_code'] = self.status_code
         retdict['message'] = self.message
         return retdict
 
