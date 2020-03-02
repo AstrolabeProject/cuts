@@ -50,8 +50,10 @@ def create_app(settings_override=None):
 
     app.logger.setLevel(app.config['LOG_LEVEL'])
 
-    app.register_blueprint(img)
-    app.register_blueprint(pages)
+    # app.register_blueprint(img, url_prefix=app.config['APPLICATION_ROOT'])
+    # app.register_blueprint(pages, url_prefix=app.config['APPLICATION_ROOT'])
+    app.register_blueprint(img, url_prefix='/cuts')
+    app.register_blueprint(pages, url_prefix='/cuts')
     extensions(app)
 
     from cuts.blueprints.img.image_manager import initialize_cache

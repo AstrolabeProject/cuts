@@ -31,7 +31,6 @@ services:
     environment:
       PYTHONUNBUFFERED: 'true'
     volumes:
-      - '.:/cuts'
       - './images:/vos/images:ro'
     ports:
       - '8000:8000'
