@@ -18,4 +18,4 @@ COPY instance instance
 COPY cuts cuts
 COPY $TESTS $TESTS
 
-CMD [ "gunicorn", "-c", "/cuts/config/gunicorn.py", "cuts.app:create_app()" ]
+CMD [ "gunicorn", "-c", "/cuts/config/gunicorn.py", "-e", "SCRIPT_NAME=/cuts", "cuts.app:create_app()" ]
