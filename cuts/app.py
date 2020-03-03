@@ -40,9 +40,11 @@ def create_app(settings_override=None):
     :param settings_override: Override settings
     :return: Flask app
     """
-    app = Flask(__name__, instance_relative_config=True)
+    app = Flask(__name__, instance_relative_config=True) # production overridable config
 
+    # load default settings
     app.config.from_object('config.settings')
+    # override default settings from instance folder settings.py, if latter exists
     app.config.from_pyfile('settings.py', silent=True)
 
     if settings_override:
@@ -50,10 +52,8 @@ def create_app(settings_override=None):
 
     app.logger.setLevel(app.config['LOG_LEVEL'])
 
-    # app.register_blueprint(img, url_prefix=app.config['APPLICATION_ROOT'])
-    # app.register_blueprint(pages, url_prefix=app.config['APPLICATION_ROOT'])
-    app.register_blueprint(img, url_prefix='/cuts')
-    app.register_blueprint(pages, url_prefix='/cuts')
+    app.register_blueprint(img)
+    app.register_blueprint(pages)
     extensions(app)
 
     from cuts.blueprints.img.image_manager import initialize_cache

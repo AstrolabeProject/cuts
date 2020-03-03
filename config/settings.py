@@ -2,10 +2,8 @@
 FLASK_DEBUG = True
 DEBUG = True
 
-APPLICATION_ROOT = '/cuts'
 LOG_LEVEL = 'INFO'  # CRITICAL / ERROR / WARNING / INFO / DEBUG
 
-# SERVER_NAME = 'localhost:8000'
 SECRET_KEY = 'insecurekeyfordevel'
 
 # Image service
