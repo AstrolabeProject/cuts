@@ -16,6 +16,7 @@ class TestImageManager(object):
     m13_hdr = 'tests/resources/pics/hdr-m13.txt'
     m13_name = 'm13.fits'
     m13_deep_name = 'm13_2.fits'
+    not_fits = 'empty.fits'
     nosuch_file = 'NOSUCHFILE'
     nosuch_path = 'tests/resources/NOSUCHFILE'
     vos_hh = '/vos/images/HorseHead.fits'
@@ -55,6 +56,16 @@ class TestImageManager(object):
         imgr.refresh_cache()                # test initial storage path
         assert len(imgr.IMAGE_MD_CACHE) != 0
         imgr.refresh_cache()                # test update storage path
+        assert len(imgr.IMAGE_MD_CACHE) != 0
+
+
+    def test_refresh_cache_dirty(self):
+        imgr.refresh_cache()                # setup cache
+        assert len(imgr.IMAGE_MD_CACHE) != 0
+        md = imgr.get_metadata(self.vos_m13) # get metadata
+        md['timestamp'] = 2                 # reset timestamp to be very old
+        imgr.put_metadata(md)               # replace the metadata
+        imgr.refresh_cache()                # test update of stale cache entry
         assert len(imgr.IMAGE_MD_CACHE) != 0
 
 
@@ -390,6 +401,7 @@ class TestImageManager(object):
 
     def test_store_metadata(self):
         # test the problem paths: valid paths are already tested by calling methods
+        assert imgr.store_metadata(self.not_fits) == None
         assert imgr.store_metadata(self.nosuch_file) == None
         assert imgr.store_metadata(self.nosuch_path) == None
         assert imgr.store_metadata(self.acat) == None
