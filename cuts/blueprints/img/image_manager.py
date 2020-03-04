@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Add collection arg to match image method.
+#   Last Modified: Catch exceptions on bad FITS files.
 #
 import os
 import pathlib as pl
@@ -264,13 +264,16 @@ def store_metadata (filepath):
         Returns the extracted metadata or None, if problems encountered.
     """
     if (utils.is_fits_filename(filepath, IMAGE_EXTS)):
-        hdr = fits.getheader(filepath)
-        if (is_image_header(hdr)):
-            md = extract_metadata(filepath, header=hdr)
-            if (md):
-                put_metadata(md)
-            return md
-        else:
+        try:
+            hdr = fits.getheader(filepath)
+            if (is_image_header(hdr)):
+                md = extract_metadata(filepath, header=hdr)
+                if (md):
+                    put_metadata(md)
+                    return md
+                else:
+                    return None
+        except:
             return None
     else:
         return None
