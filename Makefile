@@ -6,13 +6,12 @@ PROG=Cuts
 STACK=vos
 TSTIMG=cuts:test
 
-.PHONY: help clean down exec run runt stop up watch
+.PHONY: help docker dockert down exec run runt stop up watch
 
 help:
-	@echo "Make what? Try: clean, docker, dockert, down, exec, run, runt, stop, up, watch"
+	@echo "Make what? Try: docker, dockert, down, exec, run, runt, stop, up, watch"
 	@echo '  where:'
 	@echo '     help    - show this help message'
-	@echo '     clean   - remove all cache files'
 	@echo '     docker  - build a production ${PROG} server container image'
 	@echo '     dockert - build a server container image with tests (for testing)'
 	@echo '     down    - stop a running ${PROG} server stack (for development)'
@@ -23,18 +22,10 @@ help:
 	@echo '     up      - start a ${PROG} server stack (for development)'
 	@echo '     watch   - show logfile for a running ${PROG} server container'
 
-clean:
-	rm -rf config/__pycache__
-	rm -rf cuts/__pycache__
-	rm -rf cuts/blueprints/__pycache__
-	rm -rf cuts/blueprints/img/__pycache__
-	rm -rf cuts/blueprints/pages/__pycache__
-	rm -rf cuts/static/__pycache__
-
-docker: clean
+docker:
 	docker build -t ${IMG} .
 
-dockert: clean
+dockert:
 	docker build --build-arg TESTS=tests -t ${TSTIMG} .
 
 down:
