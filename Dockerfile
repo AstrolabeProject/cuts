@@ -1,9 +1,10 @@
-FROM python:3.7.5
+FROM python:3.7.9
 
 MAINTAINER Tom Hicks <hickst@email.arizona.edu>
 
 ARG TESTS=notests
 
+ENV RUNNING_IN_CONTAINER True
 ENV INSTALL_PATH /cuts
 
 RUN mkdir -p $INSTALL_PATH /vos/images /vos/cutouts
@@ -15,6 +16,7 @@ RUN pip install -r requirements.txt
 
 COPY config config
 COPY instance instance
+COPY .bash_env /etc/trhenv
 COPY cuts cuts
 COPY $TESTS $TESTS
 
