@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Catch exceptions on bad FITS files.
+#   Last Modified: Rename FITS image extents variable.
 #
 import os
 import pathlib as pl
@@ -14,7 +14,7 @@ from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
 
-from config.settings import FITS_MIME_TYPE, IMAGES_DIR, IMAGE_EXTS
+from config.settings import FITS_IMAGE_EXTS, FITS_MIME_TYPE, IMAGES_DIR
 
 from cuts.blueprints.img import exceptions
 import cuts.blueprints.img.utils as utils
@@ -128,7 +128,7 @@ def fetch_metadata (filepath):
 
 def fits_file_exists (filepath):
     """ Tell whether the given filepath names a FITS file or not. """
-    return ( utils.is_fits_filename(filepath, IMAGE_EXTS) and
+    return ( utils.is_fits_filename(filepath, FITS_IMAGE_EXTS) and
              os.path.exists(filepath) and
              os.path.isfile(filepath) )
 
@@ -189,7 +189,7 @@ def list_fits_paths (collection=None):
     """ Return a list of filepaths for FITS files in the image directory or a sub-collection.
         FITS files are identified by the given list of valid file extensions. """
     imageDir = image_dir_from_collection(collection)
-    return [ fyl for fyl in utils.gen_file_paths(imageDir) if (utils.is_fits_filename(fyl, IMAGE_EXTS)) ]
+    return [ fyl for fyl in utils.gen_file_paths(imageDir) if (utils.is_fits_filename(fyl, FITS_IMAGE_EXTS)) ]
 
 
 def match_image (co_args, collection=None, match_fn=None):
@@ -263,7 +263,7 @@ def store_metadata (filepath):
         Assumes filepath refers to a valid, readable FITS file.
         Returns the extracted metadata or None, if problems encountered.
     """
-    if (utils.is_fits_filename(filepath, IMAGE_EXTS)):
+    if (utils.is_fits_filename(filepath, FITS_IMAGE_EXTS)):
         try:
             hdr = fits.getheader(filepath)
             if (is_image_header(hdr)):
