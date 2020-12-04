@@ -1,7 +1,7 @@
 #
 # Module to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Initial port to Cuts.
+#   Last Modified: Update exceptions in imported load db config method.
 #
 import configparser
 import sys
@@ -13,36 +13,30 @@ from config.settings import APP_NAME
 import cuts.blueprints.img.exceptions as exceptions
 
 
-def load_sql_db_config (self, dbconfig_file):
+def load_sql_db_config (dbconfig_file):
     """
     Load the database configuration from the given filepath. Returns a dictionary
     of database configuration parameters.
     """
-    if (self._DEBUG):
-        print("({}): Reading DB configuration file '{}'".format(APP_NAME, dbconfig_file), file=sys.stderr)
-
     try:
         config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation(),
                                            strict=False, empty_lines_in_values=False)
         config.read_file(open(dbconfig_file))  # try to read the DB config file
     except FileNotFoundError:
         errMsg = "DB configuration file '{}' not found or not readable.".format(dbconfig_file)
-        raise errors.ProcessingError(errMsg)
+        raise exceptions.ServerException(errMsg)
 
     try:
         dbconfig = dict(config['db_properties'])  # try to fetch DB properties
     except KeyError:
         e1 = 'DB storage specified but no database parameters (db_properties) found'
         errMsg = "{} in DB configuration file '{}'.".format(e1, dbconfig_file)
-        raise errors.ProcessingError(errMsg)
+        raise exceptions.ServerException(errMsg)
 
     if (dbconfig.get('db_uri') is None):
         e1 = 'DB storage specified but no database URI (db_uri) parameter found'
         errMsg = "{} in DB configuration file '{}'.".format(e1, dbconfig_file)
-        raise errors.ProcessingError(errMsg)
-
-    if (self._DEBUG):
-        print("({}): Read {} DB configuration properties.".format(APP_NAME, len(dbconfig)), file=sys.stderr)
+        raise exceptions.ServerException(errMsg)
 
     return dbconfig
 
