@@ -2,7 +2,7 @@
 # Module to containing spawnable Celery tasks for the application.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Update for collection arg in match image method. Remove parse collection.
+#   Last Modified: Update for image manager as a class.
 #
 import os
 
@@ -17,14 +17,17 @@ from astropy.wcs import WCS
 
 from config.settings import CUTOUTS_DIR, CUTOUTS_MODE, FITS_MIME_TYPE
 
+import cuts.blueprints.img.utils as utils
 from cuts.app import create_celery_app
 from cuts.blueprints.img import exceptions
-import cuts.blueprints.img.image_manager as imgr
-import cuts.blueprints.img.utils as utils
+from cuts.blueprints.img.image_manager import ImageManager
 
 
-# Instantiate the Celery client appication
+# Instantiate the Celery client application
 celery = create_celery_app()
+
+# Instantiate the Image Manager
+imgr = ImageManager()
 
 
 #

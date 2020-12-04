@@ -1,3 +1,7 @@
+#
+# Top-level application initialization methods.
+#   Last Modified: Update for image manager as a class.
+#
 from flask import Flask
 from celery import Celery
 
@@ -55,9 +59,6 @@ def create_app(settings_override=None):
     app.register_blueprint(img)
     app.register_blueprint(pages)
     extensions(app)
-
-    from cuts.blueprints.img.image_manager import initialize_cache
-    app.before_first_request(initialize_cache)
 
     return app
 
