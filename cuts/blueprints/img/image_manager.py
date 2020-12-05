@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Add list_collections method as end to end DB test.
+#   Last Modified: Add method to list image paths. Sort returned lists.
 #
 import os
 import pathlib as pl
@@ -46,7 +46,16 @@ class ImageManager:
 
 
     def list_collections (self):
-        """ Return a list of collection name strings for collections of the images directory. """
-        return pg_sql.list_collections(self.args, self.dbconfig)
+        """ Return a list of collection name strings for all image collections. """
+        colls = pg_sql.list_collections(self.args, self.dbconfig)
+        colls.sort()
+        return colls
 
 
+    def list_image_paths (self, collection=None):
+        """
+        Return a list of image path strings for all images or those in the specified collection.
+        """
+        paths = pg_sql.list_image_paths(self.args, self.dbconfig, collection=collection)
+        paths.sort()
+        return paths
