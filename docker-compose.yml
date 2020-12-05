@@ -9,6 +9,8 @@ services:
         condition: none
     volumes:
       - redis:/data
+    networks:
+      - vos_net
     ports:
       - '6379:6379'
 
@@ -19,6 +21,8 @@ services:
     deploy:
       restart_policy:
         condition: none
+    networks:
+      - vos_net
     depends_on:
       - redis
 
@@ -34,14 +38,17 @@ services:
       - './images:/vos/images:ro'
     ports:
       - '8000:8000'
+    networks:
+      - vos_net
     depends_on:
       - celery
 
 
 networks:
-  default:
+  vos_net:
     name: vos_net
     attachable: true
 
 volumes:
   redis:
+  pgdata:
