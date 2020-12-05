@@ -1,7 +1,7 @@
 #
 # Module to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Add clean_table and list_image_paths methods.
+#   Last Modified: Dont sort the returned file paths list.
 #
 import configparser
 import sys
@@ -171,15 +171,13 @@ def list_image_paths (args, dbconfig, collection=None):
         coll_clean = clean_id(collection)
         imgq = """
             SELECT distinct(file_path) FROM {}
-            WHERE obs_collection = (%s)
-            ORDER BY file_path ASC;
+            WHERE obs_collection = (%s);
         """.format(image_table)
         rows = fetch_rows(dbconfig, imgq, [coll_clean])
 
     else:                                   # list only image paths in given collection
         imgq = """
-            SELECT distinct(file_path) FROM {}
-            ORDER BY file_path ASC;
+            SELECT distinct(file_path) FROM {};
         """.format(image_table)
         rows = fetch_rows(dbconfig, imgq, [])
 
