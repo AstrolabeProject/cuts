@@ -1,16 +1,22 @@
 #
 # Module to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Update exceptions in imported load db config method.
+#   Last Modified: Port clean_id method, use it in (premiere) list_collections query.
 #
 import configparser
 import sys
+from string import ascii_letters, digits
 
 import psycopg2
 # from psycopg2.extras import execute_values
 
 from config.settings import APP_NAME
 import cuts.blueprints.img.exceptions as exceptions
+from cuts.blueprints.img.misc_utils import keep_characters
+
+
+# Restricted set of characters allowed for database identifiers by cleaning function
+DB_ID_CHARS = set(ascii_letters + digits + '_')
 
 
 def load_sql_db_config (dbconfig_file):
@@ -39,6 +45,19 @@ def load_sql_db_config (dbconfig_file):
         raise exceptions.ServerException(errMsg)
 
     return dbconfig
+
+
+def clean_id (identifier, allowed=DB_ID_CHARS):
+    """
+    Clean the given SQL identifier to prevent SQL injection attacks.
+    Note: that this method is specifically for simple SQL identifiers and is NOT
+    a general solution which prevents SQL injection attacks.
+    """
+    if (identifier):
+        return keep_characters(identifier, allowed)
+    else:
+        errMsg = "Identifier to be cleaned cannot be empty or None."
+        raise errors.ProcessingError(errMsg)
 
 
 def execute_sql (dbconfig, sql_query_string, sql_values):
@@ -108,6 +127,28 @@ def list_catalog_tables (args, dbconfig, db_schema=None):
         print("(list_catalog_tables): => '{}'".format(catalogs), file=sys.stderr)
 
     return catalogs
+
+
+def list_collections (args, dbconfig, img_md_table=None):
+    """
+    List available image collections from the VOS database.
+
+    :param args: dictionary containing context arguments used by this method: debug
+    :param dbconfig: dictionary containing database parameters used by this method: db_uri
+    :return a list of collections names from the image metadata table.
+    """
+    schema_clean = clean_id(dbconfig.get('db_schema_name'))
+    table_clean = clean_id(img_md_table or dbconfig.get('sql_img_md_table'))
+
+    collq = "SELECT distinct(obs_collection) FROM {0}.{1};".format(schema_clean, table_clean)
+
+    rows = fetch_rows(dbconfig, collq, [])
+    collections = [row[0] for row in rows]     # extract names from row tuples
+
+    if (args.get('debug')):
+        print("(list_collections): => '{}'".format(collections), file=sys.stderr)
+
+    return collections
 
 
 def list_table_names (args, dbconfig, db_schema=None):
