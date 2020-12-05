@@ -1,7 +1,7 @@
 #
 # Module to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Port clean_id method, use it in (premiere) list_collections query.
+#   Last Modified: Add clean_table and list_image_paths methods.
 #
 import configparser
 import sys
@@ -58,6 +58,13 @@ def clean_id (identifier, allowed=DB_ID_CHARS):
     else:
         errMsg = "Identifier to be cleaned cannot be empty or None."
         raise errors.ProcessingError(errMsg)
+
+
+def clean_table (dbconfig, schema_name=None, table_name=None):
+    """ Return a cleaned schema.table string for use in queries. """
+    schema_clean = clean_id(schema_name or dbconfig.get('db_schema_name'))
+    table_clean = clean_id(table_name or dbconfig.get('sql_img_md_table'))
+    return f"{schema_clean}.{table_clean}"
 
 
 def execute_sql (dbconfig, sql_query_string, sql_values):
@@ -129,7 +136,7 @@ def list_catalog_tables (args, dbconfig, db_schema=None):
     return catalogs
 
 
-def list_collections (args, dbconfig, img_md_table=None):
+def list_collections (args, dbconfig):
     """
     List available image collections from the VOS database.
 
@@ -137,10 +144,8 @@ def list_collections (args, dbconfig, img_md_table=None):
     :param dbconfig: dictionary containing database parameters used by this method: db_uri
     :return a list of collections names from the image metadata table.
     """
-    schema_clean = clean_id(dbconfig.get('db_schema_name'))
-    table_clean = clean_id(img_md_table or dbconfig.get('sql_img_md_table'))
-
-    collq = "SELECT distinct(obs_collection) FROM {0}.{1};".format(schema_clean, table_clean)
+    image_table = clean_table(dbconfig)
+    collq = "SELECT distinct(obs_collection) FROM {};".format(image_table)
 
     rows = fetch_rows(dbconfig, collq, [])
     collections = [row[0] for row in rows]     # extract names from row tuples
@@ -149,6 +154,41 @@ def list_collections (args, dbconfig, img_md_table=None):
         print("(list_collections): => '{}'".format(collections), file=sys.stderr)
 
     return collections
+
+
+def list_image_paths (args, dbconfig, collection=None):
+    """
+    List available image collections from the VOS database.
+
+    :param args: dictionary containing context arguments used by this method: debug
+    :param dbconfig: dictionary containing database parameters used by this method: db_uri
+    :param collection: name of the image collection to list or list all, if None.
+    :return a list of collections names from the image metadata table.
+    """
+    image_table = clean_table(dbconfig)
+
+    if (collection is not None):            # list all image paths
+        coll_clean = clean_id(collection)
+        imgq = """
+            SELECT distinct(file_path) FROM {}
+            WHERE obs_collection = (%s)
+            ORDER BY file_path ASC;
+        """.format(image_table)
+        rows = fetch_rows(dbconfig, imgq, [coll_clean])
+
+    else:                                   # list only image paths in given collection
+        imgq = """
+            SELECT distinct(file_path) FROM {}
+            ORDER BY file_path ASC;
+        """.format(image_table)
+        rows = fetch_rows(dbconfig, imgq, [])
+
+    ipaths = [row[0] for row in rows]       # extract names from row tuples
+
+    if (args.get('debug')):
+        print("(list_image_paths): => '{}'".format(ipaths), file=sys.stderr)
+
+    return ipaths
 
 
 def list_table_names (args, dbconfig, db_schema=None):
