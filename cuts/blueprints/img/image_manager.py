@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Begin redo: create class skeleton.
+#   Last Modified: Add list_collections method as end to end DB test.
 #
 import os
 import pathlib as pl
@@ -29,7 +29,7 @@ class ImageManager:
 
         # load the database configuration from a given or default file path
         dbconfig_file = args.get('dbconfig_file') or DEFAULT_DBCONFIG_FILEPATH
-        dbconfig = pg_sql.load_sql_db_config(dbconfig_file)
+        self.dbconfig = pg_sql.load_sql_db_config(dbconfig_file)
 
 
     def __enter__ (self):
@@ -43,4 +43,10 @@ class ImageManager:
     def cleanup (self):
         """ Cleanup the current session. """
         pass
+
+
+    def list_collections (self):
+        """ Return a list of collection name strings for collections of the images directory. """
+        return pg_sql.list_collections(self.args, self.dbconfig)
+
 
