@@ -2,7 +2,7 @@
 # Module to containing spawnable Celery tasks for the application.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Update for image manager as a class.
+#   Last Modified: Update for list image paths method.
 #
 import os
 
@@ -35,10 +35,10 @@ imgr = ImageManager()
 #
 
 @celery.task()
-def list_images (args):
-    """ List FITS images found in the image directory or a sub-collection. """
+def list_image_paths (args):
+    """ List the paths of all available images or a just a sub-collection. """
     collection = args.get('collection')
-    image_info = imgr.list_fits_paths(collection=collection)
+    image_info = imgr.list_image_paths(collection=collection)
     return jsonify(image_info)
 
 
