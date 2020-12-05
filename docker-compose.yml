@@ -47,7 +47,7 @@ services:
 networks:
   vos_net:
     name: vos_net
-    attachable: true
+    external: true
 
 volumes:
   redis:
