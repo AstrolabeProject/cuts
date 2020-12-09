@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Add method to list image paths. Sort returned lists.
+#   Last Modified: Update to use PG manager instance.
 #
 import os
 import pathlib as pl
@@ -14,22 +14,19 @@ from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
 
-from config.settings import DEFAULT_DBCONFIG_FILEPATH, FITS_IMAGE_EXTS, FITS_MIME_TYPE, IMAGES_DIR
-import cuts.blueprints.img.utils as utils
-import cuts.blueprints.img.pg_sql as pg_sql
+from config.settings import FITS_IMAGE_EXTS, FITS_MIME_TYPE, IMAGES_DIR
+# import cuts.blueprints.img.utils as utils
 from cuts.blueprints.img import exceptions
+from cuts.blueprints.img.pg_sql import PostgreSQLManager
 
 
-class ImageManager:
+class ImageManager ():
     """ Class to serve images, metadata, and cutouts from a local database and image files. """
 
     def __init__ (self, args={}):
-        self.args = args                    # save arguments passed to this instance
+        self.args = args                      # save arguments passed to this instance
         self._DEBUG = args.get('debug', False)
-
-        # load the database configuration from a given or default file path
-        dbconfig_file = args.get('dbconfig_file') or DEFAULT_DBCONFIG_FILEPATH
-        self.dbconfig = pg_sql.load_sql_db_config(dbconfig_file)
+        self.pgsql = PostgreSQLManager(args)  # create a DB manager
 
 
     def __enter__ (self):
@@ -47,7 +44,7 @@ class ImageManager:
 
     def list_collections (self):
         """ Return a list of collection name strings for all image collections. """
-        colls = pg_sql.list_collections(self.args, self.dbconfig)
+        colls = self.pgsql.list_collections()
         colls.sort()
         return colls
 
@@ -56,6 +53,6 @@ class ImageManager:
         """
         Return a list of image path strings for all images or those in the specified collection.
         """
-        paths = pg_sql.list_image_paths(self.args, self.dbconfig, collection=collection)
+        paths = self.pgsql.list_image_paths(collection=collection)
         paths.sort()
         return paths
