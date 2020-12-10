@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Update to use PG manager instance.
+#   Last Modified: Begin fetch_image: disk files only.
 #
 import os
 import pathlib as pl
@@ -15,10 +15,12 @@ from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
 
 from config.settings import FITS_IMAGE_EXTS, FITS_MIME_TYPE, IMAGES_DIR
-# import cuts.blueprints.img.utils as utils
-from cuts.blueprints.img import exceptions
+import cuts.blueprints.img.exceptions as exceptions
+from cuts.blueprints.img.fits_utils import fits_file_exists
 from cuts.blueprints.img.pg_sql import PostgreSQLManager
 
+
+IRODS_ZONE_NAME = 'iplant'                  # TODO: pull from irods env file
 
 class ImageManager ():
     """ Class to serve images, metadata, and cutouts from a local database and image files. """
@@ -40,6 +42,30 @@ class ImageManager ():
     def cleanup (self):
         """ Cleanup the current session. """
         pass
+
+
+    def fetch_image (self, filepath, collection=None, mimetype=FITS_MIME_TYPE):
+        """
+        Find and return the specified image file from the optionally specified collection,
+        giving it the specified MIME type.
+        """
+        if (self.is_irods_file(filepath)):
+            # TODO: IMPLEMENT iRods fetch
+            raise exceptions.ImageNotFound(errMsg)
+
+        if (fits_file_exists(filepath)):
+            (imageDir, filename) = os.path.split(filepath)
+            return send_from_directory(imageDir, filename, mimetype=mimetype,
+                                       as_attachment=True, attachment_filename=filename)
+        else:
+            errMsg = "Specified image file '{0}' not found".format(filepath)
+            current_app.logger.error(errMsg)
+            raise exceptions.ImageNotFound(errMsg)
+
+
+    def is_irods_file (self, filepath):
+        # TODO: move this method to iRods helper library
+        return (filepath and filepath.startswith(IRODS_ZONE_NAME))
 
 
     def list_collections (self):
