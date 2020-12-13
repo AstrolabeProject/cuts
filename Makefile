@@ -50,4 +50,4 @@ up:
 	docker stack deploy -c docker-compose.yml ${STACK}
 
 watch:
-	docker logs -f ${NAME}
+	docker logs -f $$(docker ps -f name=vos_cuts -q)
