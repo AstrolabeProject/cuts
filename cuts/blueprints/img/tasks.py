@@ -2,7 +2,8 @@
 # Module to containing spawnable Celery tasks for the application.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Update for list image paths method.
+#   Last Modified: Add logic to get image metadata by filepath. Parse collection argument.
+#                  Add collection argument to cutout filename. Remove show_cache. Use file utils.
 #
 import os
 
@@ -17,7 +18,7 @@ from astropy.wcs import WCS
 
 from config.settings import CUTOUTS_DIR, CUTOUTS_MODE, FITS_MIME_TYPE
 
-import cuts.blueprints.img.utils as utils
+import cuts.blueprints.img.file_utils as file_utils
 from cuts.app import create_celery_app
 from cuts.blueprints.img import exceptions
 from cuts.blueprints.img.image_manager import ImageManager
@@ -37,20 +38,33 @@ imgr = ImageManager()
 @celery.task()
 def list_image_paths (args):
     """ List the paths of all available images or a just a sub-collection. """
-    collection = args.get('collection')
+    collection = parse_collection_arg(args)
     image_info = imgr.list_image_paths(collection=collection)
     return jsonify(image_info)
 
 
 @celery.task()
 def fetch_image (args):
-    """ Fetch a specific image by filepath. """
+    """ Fetch a specific image by filepath/collection. """
+    collection = parse_collection_arg(args)
     filepath = args.get('path')
     if (not filepath):
         errMsg = "An image file path must be specified, via the 'path' argument"
         current_app.logger.error(errMsg)
         raise exceptions.RequestException(errMsg)
-    return imgr.return_image(filepath)
+    return imgr.fetch_image(filepath, collection=collection)
+
+
+@celery.task()
+def get_image_metadata (args):
+    """ Fetch image metadata for a specific image by filepath/collection. """
+    collection = parse_collection_arg(args)
+    filepath = args.get('path')
+    if (not filepath):
+        errMsg = "An image file path must be specified, via the 'path' argument"
+        current_app.logger.error(errMsg)
+        raise exceptions.RequestException(errMsg)
+    return jsonify(imgr.get_image_metadata(filepath, collection=collection))
 
 
 @celery.task()
@@ -66,8 +80,8 @@ def list_collections (args):
 
 @celery.task()
 def list_cutouts (args):
-    """ List all existing cutouts in the cache directory. """
-    cutout_paths = [ fyl for fyl in utils.gen_file_paths(CUTOUTS_DIR) ]
+    """ List all existing cutouts in the cutouts (cache) directory. """
+    cutout_paths = [ fyl for fyl in file_utils.gen_file_paths(CUTOUTS_DIR) ]
     return jsonify(cutout_paths)
 
 
@@ -88,7 +102,7 @@ def get_cutout (args):
 
     # parse the parameters for the cutout
     co_args = parse_cutout_args(args)
-    collection = args.get('collection')
+    collection = parse_collection_arg(args)
 
     # figure out which image to make a cutout from based on the cutout parameters
     image_filepath = imgr.match_image(co_args, collection=collection)
@@ -105,7 +119,7 @@ def get_cutout (args):
     cutout = make_cutout(hdu, co_args)
 
     # write the cutout to a new FITS file and then return it
-    co_filename = make_cutout_filename(image_filepath, cutout, co_args)
+    co_filename = make_cutout_filename(image_filepath, cutout, co_args, collection=collection)
     write_cutout(hdu, co_filename)
 
     return return_cutout(co_filename)       # return the image cutout
@@ -118,13 +132,13 @@ def get_cutout_by_filter (args):
 
     # parse the parameters for the cutout
     co_args = parse_cutout_args(args, filterRequired=True)
-    collection = args.get('collection')
+    collection = parse_collection_arg(args)
 
     # figure out which image to make a cutout from based on the cutout parameters
     filt = co_args.get('filter')
     image_filepath = imgr.match_image(co_args, collection=collection, match_fn=imgr.by_filter_matcher)
     if (not image_filepath):
-        errMsg = "An image was not found for filter {0} in images directory".format(filt)
+        errMsg = f"An image was not found for filter {filt} in images directory"
         current_app.logger.error(errMsg)
         raise exceptions.RequestException(errMsg)
 
@@ -136,15 +150,10 @@ def get_cutout_by_filter (args):
     cutout = make_cutout(hdu, co_args)
 
     # write the cutout to a new FITS file and then return it
-    co_filename = make_cutout_filename(image_filepath, cutout, co_args)
+    co_filename = make_cutout_filename(image_filepath, cutout, co_args, collection=collection)
     write_cutout(hdu, co_filename)
 
     return return_cutout(co_filename)       # return the cutout image
-
-
-@celery.task()
-def show_cache (args):
-    return imgr.show_cache()
 
 
 #
@@ -161,7 +170,7 @@ def make_cutout (hdu, co_args):
                           wcs=wcs, mode=CUTOUTS_MODE)
     except (NoOverlapError, PartialOverlapError):
         sky = co_args['center']
-        errMsg = "There is no overlap between the reference image and the given center coordinate: {0}, {1} {2} ({3})".format(sky.ra.value, sky.dec.value, sky.ra.unit.name, sky.frame.name)
+        errMsg = f"There is no overlap between the reference image and the given center coordinate: {sky.ra.value}, {sky.dec.value} {sky.ra.unit.name} ({sky.frame.name})"
         current_app.logger.error(errMsg)
         raise exceptions.RequestException(errMsg)
 
@@ -172,13 +181,23 @@ def make_cutout (hdu, co_args):
     return cutout
 
 
-def make_cutout_filename (image_filepath, cutout, co_args):
+def make_cutout_filename (image_filepath, cutout, co_args, collection=None):
     """ Return a filename for the Astropy cutout from info in the given parameters. """
-    baseName = os.path.splitext(os.path.basename(image_filepath))[0]
+    basename = os.path.splitext(os.path.basename(image_filepath))[0]
     ra = co_args['ra']
     dec = co_args['dec']
     shape = cutout.shape
-    return "{0}__{1}_{2}_{3}x{4}.fits".format(baseName, ra, dec, shape[0], shape[1])
+    coll = collection if (collection is not None) else '_'
+    return f"{coll}_{basename}__{ra}_{dec}_{shape[0]}x{shape[1]}.fits"
+
+
+def parse_collection_arg (args):
+    """ Parse out the collection argument, returning the collection name string or None,
+        if no collection argument given. """
+    collection = args.get('collection', args.get('coll'))
+    if (collection is not None):
+        return collection.strip()
+    return None
 
 
 def parse_coordinate_args (args):
@@ -270,7 +289,7 @@ def return_cutout (co_filename, mimetype=FITS_MIME_TYPE):
     if (imgr.fits_file_exists(co_filepath)):
         return send_from_directory(CUTOUTS_DIR, co_filename, mimetype=mimetype,
                                    as_attachment=True, attachment_filename=co_filename)
-    errMsg = "Specified image cutout file '{0}' not found in cutouts directory".format(co_filename)
+    errMsg = f"Specified image cutout file '{co_filename}' not found in cutouts directory"
     current_app.logger.error(errMsg)
     raise exceptions.ImageNotFound(errMsg)
 
