@@ -1,7 +1,7 @@
 #
 # Class to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Redo as class. Refactor out common methods to base.
+#   Last Modified: Add method to get image metadata by filepath.
 #
 import sys
 
@@ -34,6 +34,34 @@ class PostgreSQLManager (ISQLBase):
         schema_clean = self.clean_id(schema_name or self.db_schema_name)
         table_clean = self.clean_id(table_name or self.sql_img_md_table)
         return f"{schema_clean}.{table_clean}"
+
+
+    def get_image_metadata (self, filepath, collection=None):
+        """
+        List  image collections from the VOS database.
+
+        :param filepath: filepath of the image whose metadata is desired.
+        :param collection: optional name of the image collection to use or all, if None.
+        :return an array of dictionaries representing the records from the image metadata table.
+        """
+        image_table = self.clean_table_name()
+
+        if (collection is not None):            # list only image paths in given collection
+            coll_clean = self.clean_id(collection)
+            imgq = """
+                SELECT * FROM {}
+                WHERE file_path = (%s) and obs_collection = (%s);
+            """.format(image_table)
+            metadata = self.fetch_rows_2dicts(imgq, [filepath, coll_clean])
+
+        else:                                   # list all image paths
+            imgq = "SELECT * FROM {} WHERE file_path = (%s);".format(image_table)
+            metadata = self.fetch_rows_2dicts(imgq, [filepath])
+
+        if (self._DEBUG):
+            print("(get_image_metadata): => '{}'".format(metadata), file=sys.stderr)
+
+        return metadata                         # return array of dictionaries
 
 
     def list_catalog_tables (self, db_schema=None):

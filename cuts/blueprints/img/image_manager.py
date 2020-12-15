@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Begin fetch_image: disk files only.
+#   Last Modified: Add method to get image metadata by filepath.
 #
 import os
 import pathlib as pl
@@ -46,11 +46,12 @@ class ImageManager ():
 
     def fetch_image (self, filepath, collection=None, mimetype=FITS_MIME_TYPE):
         """
-        Find and return the specified image file from the optionally specified collection,
-        giving it the specified MIME type.
+        Find and return the image at the specified path, in the optionally
+        specified collection, giving it the specified MIME type. If no collection
+        is given, then the first image with the specified path is used.
         """
         if (self.is_irods_file(filepath)):
-            # TODO: IMPLEMENT iRods fetch
+            # TODO: IMPLEMENT iRods fetch image
             raise exceptions.ImageNotFound(errMsg)
 
         if (fits_file_exists(filepath)):
@@ -58,9 +59,18 @@ class ImageManager ():
             return send_from_directory(imageDir, filename, mimetype=mimetype,
                                        as_attachment=True, attachment_filename=filename)
         else:
-            errMsg = "Specified image file '{0}' not found".format(filepath)
+            errMsg = f"Specified image file '{filepath}' not found"
             current_app.logger.error(errMsg)
             raise exceptions.ImageNotFound(errMsg)
+
+
+    def get_image_metadata (self, filepath, collection=None):
+        """
+        Find and return the metadata for the image at the specified path, in the
+        optionally specified collection. If no collection is given, then the
+        first image with the specified path is used.
+        """
+        return self.pgsql.get_image_metadata(filepath, collection=collection)
 
 
     def is_irods_file (self, filepath):
