@@ -2,7 +2,7 @@
 # Top-level Flask routing module: answers requests or spawns Celery task to do it.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Update for list image paths method.
+#   Last Modified: Add logic to get image metadata by filepath. Remove show_cache.
 #
 from flask import Blueprint, jsonify, request
 # from flask_cors import CORS
@@ -27,10 +27,18 @@ def img_paths_list ():
 
 @img.route('/img/fetch')
 def img_fetch ():
-    """ Fetch a specific image by filepath. """
+    """ Fetch a specific image by filepath/collection. """
     # required to avoid circular imports
     from cuts.blueprints.img.tasks import fetch_image
     return fetch_image(request.args)
+
+
+@img.route('/img/metadata')
+def img_metadata ():
+    """ Fetch image metadata for a specific image by filepath/collection. """
+    # required to avoid circular imports
+    from cuts.blueprints.img.tasks import get_image_metadata
+    return get_image_metadata(request.args)
 
 
 @img.route('/img/collections/list')
@@ -47,7 +55,7 @@ def coll_list ():
 
 @img.route('/img/co/list')
 def co_list ():
-    """ List all existing cutouts in the cache directory. """
+    """ List all existing cutouts in the cutouts (cache) directory. """
     # required to avoid circular imports
     from cuts.blueprints.img.tasks import list_cutouts
     return list_cutouts(request.args)
@@ -81,14 +89,6 @@ def co_cutout_by_filter ():
 def echo ():
     """ Echo the Request arguments as a JSON data structure. """
     return jsonify(request.args)
-
-
-@img.route('/admin/show_cache')
-def admin_show_cache ():
-    """ Show the current contents of the image cache. """
-    # required to avoid circular imports
-    from cuts.blueprints.img.tasks import show_cache
-    return show_cache(request.args)
 
 
 #
