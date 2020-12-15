@@ -1,14 +1,14 @@
 #
 # Base class for common methods to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Refactor out this base class.
+#   Last Modified: Add method to return array of row dictionaries from query.
 #
 import configparser
 import sys
 from string import ascii_letters, digits
 
 import psycopg2
-# from psycopg2.extras import execute_values
+import psycopg2.extras
 
 from config.settings import DEFAULT_DBCONFIG_FILEPATH
 import cuts.blueprints.img.exceptions as exceptions
@@ -120,3 +120,28 @@ class ISQLBase ():
             conn.close()
 
         return rows
+
+
+    def fetch_rows_2dicts (self, sql_query_string, sql_values):
+        """
+        Open a database connection and execute the given SQL format string with the
+        given SQL values, returning a dictionary of attributes, which are the rows of
+        the query result.
+
+        :param sql_query_string: a valid Psycopg2 query string. This is similar to a
+            standard python template string, BUT NOT THE SAME. See:
+            https://www.psycopg.org/docs/usage.html#passing-parameters-to-sql-queries
+        :param sql_value: a list of values to substitute into the query string.
+        :return a list of dictionaries, one for each result row.
+        """
+        conn = psycopg2.connect(self.db_uri, cursor_factory=psycopg2.extras.DictCursor)
+        try:
+            with conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(sql_query_string, sql_values)
+                    rows = cursor.fetchall()
+                    rowdicts = [dict(row) for row in rows]  # make array of dictionaries
+        finally:
+            conn.close()
+
+        return rowdicts
