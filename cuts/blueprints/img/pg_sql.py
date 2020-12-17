@@ -1,7 +1,7 @@
 #
 # Class to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Add method to get image metadata by filepath.
+#   Last Modified: Add list filters and initial cone search query methods.
 #
 import sys
 
@@ -85,12 +85,15 @@ class PostgreSQLManager (ISQLBase):
 
     def list_collections (self):
         """
-        List available image collections from the VOS database.
+        List all image collections in the metadata database.
 
         :return a list of collections names from the image metadata table.
         """
         image_table = self.clean_table_name()
-        collq = "SELECT distinct(obs_collection) FROM {};".format(image_table)
+        collq = """
+            SELECT distinct(obs_collection) FROM {}
+            WHERE obs_collection IS NOT NULL;
+        """.format(image_table)
 
         rows = self.fetch_rows(collq, [])
         collections = [row[0] for row in rows]     # extract names from row tuples
@@ -101,12 +104,47 @@ class PostgreSQLManager (ISQLBase):
         return collections
 
 
+    def list_filters (self, collection=None):
+        """
+        List all filters for all images in the metadata database or just those in
+        the specified collection.
+
+        :param collection: if specified, restrict the listing to the named image collection.
+        :return a list of collections names from the image metadata table.
+        """
+        image_table = self.clean_table_name()
+
+        if (collection is not None):            # list all image paths
+            coll_clean = self.clean_id(collection)
+            imgq = """
+                SELECT distinct(filter) FROM {}
+                WHERE obs_collection = (%s)
+                AND filter IS NOT NULL;
+            """.format(image_table)
+            rows = self.fetch_rows(imgq, [coll_clean])
+
+        else:                                   # list only filters used in given collection
+            imgq = """
+                SELECT distinct(filter) FROM {}
+                WHERE filter IS NOT NULL;
+            """.format(image_table)
+            rows = self.fetch_rows(imgq, [])
+
+        filts = [row[0] for row in rows]       # extract names from row tuples
+
+        if (self._DEBUG):
+            print("(list_filters): => '{}'".format(filts), file=sys.stderr)
+
+        return filts
+
+
     def list_image_paths (self, collection=None):
         """
-        List available image collections from the VOS database.
+        List file paths for all images in the metadata database or just those in
+        the specified collection.
 
-        :param collection: name of the image collection to list or list all, if None.
-        :return a list of collections names from the image metadata table.
+        :param collection: if specified, restrict the listing to the named image collection.
+        :return a list of image paths from the image metadata table.
         """
         image_table = self.clean_table_name()
 
@@ -153,6 +191,37 @@ class PostgreSQLManager (ISQLBase):
         tables = [row[0] for row in rows]     # extract names from row tuples
 
         if (self._DEBUG):
-            print("(i_sql.list_table_names): => '{}'".format(tables), file=sys.stderr)
+            print("(list_table_names): => '{}'".format(tables), file=sys.stderr)
 
         return tables
+
+
+    def query_cone (self, center_ra, center_dec, radius, collection=None):
+        """
+        List metadata for images containing the given point within the given radius.
+
+        :param collection: if specified, restrict the listing to the named image collection.
+        :return a list of metadata dictionaries for images which contain the specified point.
+        """
+        image_table = self.clean_table_name()
+
+        if (collection is not None):            # list all image paths
+            coll_clean = self.clean_id(collection)
+            imgq = """
+                SELECT * FROM {}
+                WHERE obs_collection = (%s)
+                AND q3c_radial_query(s_ra, s_dec, (%s), (%s), (%s)) = TRUE;
+            """.format(image_table)
+            rows = self.fetch_rows_2dicts(imgq, [coll_clean, center_ra, center_dec, radius])
+
+        else:                                   # list only image paths in given collection
+            imgq = """
+                SELECT * FROM {}
+                WHERE q3c_radial_query(s_ra, s_dec, (%s), (%s), (%s)) = TRUE;
+            """.format(image_table)
+            rows = self.fetch_rows_2dicts(imgq, [center_ra, center_dec, radius])
+
+        if (self._DEBUG):
+            print("(query_cone): => '{}'".format(rows), file=sys.stderr)
+
+        return rows

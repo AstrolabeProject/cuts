@@ -3,9 +3,10 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Add method to get image metadata by filepath.
+#   Last Modified: Add list filters and initial cone search query methods.
 #
 import os
+import sys
 import pathlib as pl
 
 from flask import current_app, request, send_from_directory
@@ -85,6 +86,15 @@ class ImageManager ():
         return colls
 
 
+    def list_filters (self, collection=None):
+        """
+        Return a list of filter names for all images or those in the specified collection.
+        """
+        filts = self.pgsql.list_filters(collection=collection)
+        filts.sort()
+        return filts
+
+
     def list_image_paths (self, collection=None):
         """
         Return a list of image path strings for all images or those in the specified collection.
@@ -92,3 +102,17 @@ class ImageManager ():
         paths = self.pgsql.list_image_paths(collection=collection)
         paths.sort()
         return paths
+
+
+    def query_cone (self, co_args, collection=None):
+        """
+        Return a list of image metadata for images which contain a given point
+        within a given radius. If an image collection is specified, restrict the search
+        to the specified collection.
+        """
+        ra = co_args.get('ra')
+        dec = co_args.get('dec')
+        radius = co_args.get('size')        # radius of cone in degrees
+
+        # TODO: LATER Error message if query parameters missing
+        return self.pgsql.query_cone(ra, dec, radius, collection=collection)
