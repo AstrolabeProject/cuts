@@ -2,7 +2,7 @@
 # Top-level Flask routing module: answers requests or spawns Celery task to do it.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Add logic to get image metadata by filepath. Remove show_cache.
+#   Last Modified: Begin renaming methods. Add cone search query.
 #
 from flask import Blueprint, jsonify, request
 # from flask_cors import CORS
@@ -14,17 +14,8 @@ img = Blueprint('img', __name__, template_folder='templates')
 
 
 #
-# Full image methods
+# Image methods
 #
-
-@img.route('/img/list')
-def img_paths_list ():
-    """ List FITS images found in the image directory or a sub-collection. """
-    # required to avoid circular imports
-    from cuts.blueprints.img.tasks import list_image_paths
-    return list_image_paths(request.args)
-
-
 @img.route('/img/fetch')
 def img_fetch ():
     """ Fetch a specific image by filepath/collection. """
@@ -41,12 +32,37 @@ def img_metadata ():
     return get_image_metadata(request.args)
 
 
-@img.route('/img/collections/list')
-def coll_list ():
-    """ List image collections found in the image directory. """
+@img.route('/img/list_collections')
+def list_collections ():
+    """ List image collections found in the image metadata table. """
     # required to avoid circular imports
     from cuts.blueprints.img.tasks import list_collections
     return list_collections(request.args)
+
+
+@img.route('/img/list_image_paths')
+def list_image_paths ():
+    """ List paths to FITS images from the image metadata table. """
+    # required to avoid circular imports
+    from cuts.blueprints.img.tasks import list_image_paths
+    return list_image_paths(request.args)
+
+
+@img.route('/img/list_filters')
+def list_filters ():
+    """ List image filters found in the image metadata table. """
+    # required to avoid circular imports
+    from cuts.blueprints.img.tasks import list_filters
+    return list_filters(request.args)
+
+
+@img.route('/img/query_cone')
+def query_cone ():
+    """ List images which contain the given point within a given radius. """
+    # required to avoid circular imports
+    from cuts.blueprints.img.tasks import query_cone
+    return query_cone(request.args)
+
 
 
 #
