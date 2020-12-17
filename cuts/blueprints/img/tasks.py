@@ -2,8 +2,7 @@
 # Module to containing spawnable Celery tasks for the application.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Add logic to get image metadata by filepath. Parse collection argument.
-#                  Add collection argument to cutout filename. Remove show_cache. Use file utils.
+#   Last Modified: Begin renaming/refactoring methods. Add cone search query. Add parse_filter_arg.
 #
 import os
 
@@ -36,14 +35,6 @@ imgr = ImageManager()
 #
 
 @celery.task()
-def list_image_paths (args):
-    """ List the paths of all available images or a just a sub-collection. """
-    collection = parse_collection_arg(args)
-    image_info = imgr.list_image_paths(collection=collection)
-    return jsonify(image_info)
-
-
-@celery.task()
 def fetch_image (args):
     """ Fetch a specific image by filepath/collection. """
     collection = parse_collection_arg(args)
@@ -69,8 +60,31 @@ def get_image_metadata (args):
 
 @celery.task()
 def list_collections (args):
-    """ List all image collections found in the image directory. """
+    """ List image collections found in the image metadata table. """
     return jsonify(imgr.list_collections())
+
+
+@celery.task()
+def list_filters (args):
+    """ List image filters found in the image metadata table. """
+    collection = parse_collection_arg(args)
+    return jsonify(imgr.list_filters(collection=collection))
+
+
+@celery.task()
+def list_image_paths (args):
+    """ List paths to FITS images from the image metadata table. """
+    collection = parse_collection_arg(args)
+    return jsonify(imgr.list_image_paths(collection=collection))
+
+
+@celery.task()
+def query_cone (args):
+    """ List images which contain the given point within a given radius. """
+    # parse the parameters for the location, radius, and collection
+    co_args = parse_cutout_args(args)
+    collection = parse_collection_arg(args)
+    return jsonify(imgr.query_cone(co_args, collection=collection))
 
 
 
@@ -131,11 +145,11 @@ def get_cutout_by_filter (args):
         The band is specified by the non-optional 'filter' argument. """
 
     # parse the parameters for the cutout
-    co_args = parse_cutout_args(args, filterRequired=True)
+    co_args = parse_cutout_args(args)
     collection = parse_collection_arg(args)
+    filt = parse_filter_arg(args, filterRequired=True)  # test for required filter
 
     # figure out which image to make a cutout from based on the cutout parameters
-    filt = co_args.get('filter')
     image_filepath = imgr.match_image(co_args, collection=collection, match_fn=imgr.by_filter_matcher)
     if (not image_filepath):
         errMsg = f"An image was not found for filter {filt} in images directory"
@@ -154,6 +168,7 @@ def get_cutout_by_filter (args):
     write_cutout(hdu, co_filename)
 
     return return_cutout(co_filename)       # return the cutout image
+
 
 
 #
@@ -230,25 +245,14 @@ def parse_coordinate_args (args):
     return co_args                          # return parsed, converted cutout arguments
 
 
-def parse_cutout_args (args, filterRequired=False):
+def parse_cutout_args (args):
     """ Parse, convert, and check the given arguments, returning a dictionary
         of cutout arguments. Any arguments needed by cutout routines should be passed
         through to the return dictionary.
     """
-    co_args = parse_cutout_size(args)       # begin by getting cutout size parameters
-
-    co_args.update(parse_coordinate_args(args)) # add coordinate parameters
-
-    filt = args.get('filter')
-    if (filt):
-        co_args['filter'] = filt
-    else:
-        if (filterRequired):
-            errMsg = "An image filter must be specified, via the 'filter' argument"
-            current_app.logger.error(errMsg)
-            raise exceptions.RequestException(errMsg)
-
-    return co_args                          # return parsed, converted cutout arguments
+    co_args = parse_cutout_size(args)            # begin by getting cutout size parameters
+    co_args.update(parse_coordinate_args(args))  # add coordinate parameters
+    return co_args                               # return parsed, converted cutout arguments
 
 
 def parse_cutout_size (args):
@@ -258,7 +262,7 @@ def parse_cutout_size (args):
 
     # read and parse a size specification in arc minutes or degrees
     sizeArcMinStr = args.get('sizeArcMin')
-    sizeDegStr = args.get('sizeDeg')
+    sizeDegStr = args.get('sizeDeg', args.get('radius'))  # allow alternate radius keyword
     sizeArcSecStr = args.get('sizeArcSec')
 
     if (sizeArcMinStr):                     # prefer units in arc minutes
@@ -281,6 +285,21 @@ def parse_cutout_size (args):
         co_args.pop('co_size', None)        # remove to signal that no sizes were given
 
     return co_args                          # return parsed, converted cutout arguments
+
+
+def parse_filter_arg (args, filterRequired=False):
+    """
+    Parse out the filter argument, returning the filter name string or None.
+    :raises: RequestException if no filter given and the filterRequired flag is True.
+    """
+    filt = args.get('filter')
+    if (filt is not None):
+        filt = filt.strip()
+        if ((not filt) and filterRequired):
+            errMsg = "An image filter must be specified, via the 'filter' argument"
+            current_app.logger.error(errMsg)
+            raise exceptions.RequestException(errMsg)
+    return filt
 
 
 def return_cutout (co_filename, mimetype=FITS_MIME_TYPE):
