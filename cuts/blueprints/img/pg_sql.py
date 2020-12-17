@@ -1,11 +1,12 @@
 #
 # Class to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Add list filters and initial cone search query methods.
+#   Last Modified: Add field selection to query_cone.
 #
 import sys
 
 import psycopg2
+# import psycopg2.sql as sql
 # from psycopg2.extras import execute_values
 
 from config.settings import APP_NAME
@@ -196,7 +197,7 @@ class PostgreSQLManager (ISQLBase):
         return tables
 
 
-    def query_cone (self, center_ra, center_dec, radius, collection=None):
+    def query_cone (self, center_ra, center_dec, radius, collection=None, select=None):
         """
         List metadata for images containing the given point within the given radius.
 
@@ -205,20 +206,25 @@ class PostgreSQLManager (ISQLBase):
         """
         image_table = self.clean_table_name()
 
+        if (select is not None):
+            fields = ','.join([self.clean_id(fld) for fld in select])
+        else:
+            fields = '*'
+
         if (collection is not None):            # list all image paths
             coll_clean = self.clean_id(collection)
             imgq = """
-                SELECT * FROM {}
+                SELECT {} from {}
                 WHERE obs_collection = (%s)
                 AND q3c_radial_query(s_ra, s_dec, (%s), (%s), (%s)) = TRUE;
-            """.format(image_table)
+            """.format(fields, image_table)
             rows = self.fetch_rows_2dicts(imgq, [coll_clean, center_ra, center_dec, radius])
 
         else:                                   # list only image paths in given collection
             imgq = """
-                SELECT * FROM {}
+                SELECT {} from {}
                 WHERE q3c_radial_query(s_ra, s_dec, (%s), (%s), (%s)) = TRUE;
-            """.format(image_table)
+            """.format(fields, image_table)
             rows = self.fetch_rows_2dicts(imgq, [center_ra, center_dec, radius])
 
         if (self._DEBUG):
