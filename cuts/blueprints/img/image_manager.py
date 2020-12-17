@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Add list filters and initial cone search query methods.
+#   Last Modified: Add default SELECT fields, arg checking to query_cone.
 #
 import os
 import sys
@@ -20,6 +20,8 @@ import cuts.blueprints.img.exceptions as exceptions
 from cuts.blueprints.img.fits_utils import fits_file_exists
 from cuts.blueprints.img.pg_sql import PostgreSQLManager
 
+
+DEFAULT_SELECT_FIELDS = [ 'id', 's_ra', 's_dec', 'file_name', 'file_path', 'obs_collection' ]
 
 IRODS_ZONE_NAME = 'iplant'                  # TODO: pull from irods env file
 
@@ -104,7 +106,7 @@ class ImageManager ():
         return paths
 
 
-    def query_cone (self, co_args, collection=None):
+    def query_cone (self, co_args, collection=None, select=DEFAULT_SELECT_FIELDS):
         """
         Return a list of image metadata for images which contain a given point
         within a given radius. If an image collection is specified, restrict the search
@@ -112,7 +114,12 @@ class ImageManager ():
         """
         ra = co_args.get('ra')
         dec = co_args.get('dec')
-        radius = co_args.get('size')        # radius of cone in degrees
+        radius = co_args.get('size')        # radius of cone in degrees required
 
-        # TODO: LATER Error message if query parameters missing
-        return self.pgsql.query_cone(ra, dec, radius, collection=collection)
+        if (ra and dec and radius):
+            return self.pgsql.query_cone(ra, dec, radius, collection=collection, select=select)
+
+        else:
+            errMsg = "'ra', 'dec', and a radius size (one of 'radius', 'sizeDeg', 'sizeArcMin', or 'sizeArcSec') must be specified."
+            current_app.logger.error(errMsg)
+            raise exceptions.RequestException(errMsg)
