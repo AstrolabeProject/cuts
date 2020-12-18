@@ -2,7 +2,7 @@
 # Top-level Flask routing module: answers requests or spawns Celery task to do it.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Begin renaming methods. Add cone search query.
+#   Last Modified: Rename *by_filename methods. Add *by_filter methods.
 #
 from flask import Blueprint, jsonify, request
 # from flask_cors import CORS
@@ -16,20 +16,36 @@ img = Blueprint('img', __name__, template_folder='templates')
 #
 # Image methods
 #
-@img.route('/img/fetch')
-def img_fetch ():
-    """ Fetch a specific image by filepath/collection. """
+@img.route('/img/fetch_by_filepath')
+def img_fetch_by_filepath ():
+    """ Fetch a specific image by filepath. """
     # required to avoid circular imports
-    from cuts.blueprints.img.tasks import fetch_image
-    return fetch_image(request.args)
+    from cuts.blueprints.img.tasks import fetch_image_by_filepath
+    return fetch_image_by_filepath(request.args)
 
 
-@img.route('/img/metadata')
-def img_metadata ():
+@img.route('/img/fetch_by_filter')
+def img_fetch_by_filter ():
+    """ Fetch a specific image by image filter/collection. """
+    # required to avoid circular imports
+    from cuts.blueprints.img.tasks import fetch_image_by_filter
+    return fetch_image_by_filter(request.args)
+
+
+@img.route('/img/metadata_by_filepath')
+def img_metadata_by_filepath ():
     """ Fetch image metadata for a specific image by filepath/collection. """
     # required to avoid circular imports
-    from cuts.blueprints.img.tasks import get_image_metadata
-    return get_image_metadata(request.args)
+    from cuts.blueprints.img.tasks import image_metadata_by_filepath
+    return image_metadata_by_filepath(request.args)
+
+
+@img.route('/img/metadata_by_filter')
+def img_metadata_by_filter ():
+    """ Fetch image metadata for a specific image by filter/collection. """
+    # required to avoid circular imports
+    from cuts.blueprints.img.tasks import image_metadata_by_filter
+    return image_metadata_by_filter(request.args)
 
 
 @img.route('/img/list_collections')
