@@ -1,7 +1,7 @@
 #
 # Class to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Add field selection to query_cone.
+#   Last Modified: Rename method to image_metadata_by_filepath.
 #
 import sys
 
@@ -37,9 +37,9 @@ class PostgreSQLManager (ISQLBase):
         return f"{schema_clean}.{table_clean}"
 
 
-    def get_image_metadata (self, filepath, collection=None):
+    def image_metadata_by_filepath (self, filepath, collection=None):
         """
-        List  image collections from the VOS database.
+        Return the image metadata for the file at the given filepath.
 
         :param filepath: filepath of the image whose metadata is desired.
         :param collection: optional name of the image collection to use or all, if None.
@@ -60,7 +60,7 @@ class PostgreSQLManager (ISQLBase):
             metadata = self.fetch_rows_2dicts(imgq, [filepath])
 
         if (self._DEBUG):
-            print("(get_image_metadata): => '{}'".format(metadata), file=sys.stderr)
+            print("(image_metadata_by_filepath): => '{}'".format(metadata), file=sys.stderr)
 
         return metadata                         # return array of dictionaries
 
