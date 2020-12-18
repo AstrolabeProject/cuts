@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Add default SELECT fields, arg checking to query_cone.
+#   Last Modified: Rename *by_filename methods. Add *by_filter stubs. Add return_image_at_filepath.
 #
 import os
 import sys
@@ -47,33 +47,50 @@ class ImageManager ():
         pass
 
 
-    def fetch_image (self, filepath, collection=None, mimetype=FITS_MIME_TYPE):
+    def fetch_image_by_filepath (self, filepath, mimetype=FITS_MIME_TYPE):
         """
-        Find and return the image at the specified path, in the optionally
-        specified collection, giving it the specified MIME type. If no collection
-        is given, then the first image with the specified path is used.
+        Directly read and return the image at the specified device path. Handles
+        dispatching to fetch methods for different storage devices (e.g., local disk, iRods)
         """
         if (self.is_irods_file(filepath)):
             # TODO: IMPLEMENT iRods fetch image
             raise exceptions.ImageNotFound(errMsg)
-
-        if (fits_file_exists(filepath)):
-            (imageDir, filename) = os.path.split(filepath)
-            return send_from_directory(imageDir, filename, mimetype=mimetype,
-                                       as_attachment=True, attachment_filename=filename)
         else:
-            errMsg = f"Specified image file '{filepath}' not found"
-            current_app.logger.error(errMsg)
-            raise exceptions.ImageNotFound(errMsg)
+            return self.return_image_at_filepath(filepath, mimetype=mimetype)
 
 
-    def get_image_metadata (self, filepath, collection=None):
+    def fetch_image_by_filter (self, filt, collection=None, mimetype=FITS_MIME_TYPE):
+        """
+        Find and return the most recent image with the specified filter. Handles dispatching
+        to fetch methods for different storage devices (e.g., local disk, iRods).
+        If no collection is given, then the last image with the specified filter is used.
+        """
+        # TODO: IMPLEMENT LATER
+        # with_filter = self.pgsql.query_by_filter
+        # if (with_filter):
+        #     filepath = with_filter[0].get('file_path')
+        #     # TODO: check for empty filepath
+        #     return self.return_image_at_filepath(filepath, mimetype=mimetype)
+        return None                         # TODO: IMPLEMENT LATER
+
+
+    def image_metadata_by_filepath (self, filepath, collection=None):
         """
         Find and return the metadata for the image at the specified path, in the
         optionally specified collection. If no collection is given, then the
         first image with the specified path is used.
         """
-        return self.pgsql.get_image_metadata(filepath, collection=collection)
+        return self.pgsql.image_metadata_by_filepath(filepath, collection=collection)
+
+
+    def image_metadata_by_filter (self, filt, collection=None):
+        """
+        Find and return the metadata for the most recent image with the specified filter.
+        If no collection is given, then the most recent image with the specified filter is used.
+        """
+        # TODO: IMPLEMENT LATER
+        # return self.pgsql.image_metadata_by_filter(filt, collection=collection)
+        return []                           # TODO: IMPLEMENT LATER
 
 
     def is_irods_file (self, filepath):
@@ -123,3 +140,15 @@ class ImageManager ():
             errMsg = "'ra', 'dec', and a radius size (one of 'radius', 'sizeDeg', 'sizeArcMin', or 'sizeArcSec') must be specified."
             current_app.logger.error(errMsg)
             raise exceptions.RequestException(errMsg)
+
+
+    def return_image_at_filepath (self, filepath, mimetype=FITS_MIME_TYPE):
+        """ Return the image file at the specified file path, giving it the specified MIME type. """
+        if (fits_file_exists(filepath)):
+            (imageDir, filename) = os.path.split(filepath)
+            return send_from_directory(imageDir, filename, mimetype=mimetype,
+                                       as_attachment=True, attachment_filename=filename)
+        else:
+            errMsg = f"Specified image file '{filepath}' not found"
+            current_app.logger.error(errMsg)
+            raise exceptions.ImageNotFound(errMsg)
