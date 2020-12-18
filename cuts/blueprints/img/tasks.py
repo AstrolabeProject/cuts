@@ -2,7 +2,7 @@
 # Module to containing spawnable Celery tasks for the application.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Begin renaming/refactoring methods. Add cone search query. Add parse_filter_arg.
+#   Last Modified: Add parse_filepath_arg. Rename *by_filename methods. Add *by_filter methods.
 #
 import os
 
@@ -35,27 +35,34 @@ imgr = ImageManager()
 #
 
 @celery.task()
-def fetch_image (args):
-    """ Fetch a specific image by filepath/collection. """
-    collection = parse_collection_arg(args)
-    filepath = args.get('path')
-    if (not filepath):
-        errMsg = "An image file path must be specified, via the 'path' argument"
-        current_app.logger.error(errMsg)
-        raise exceptions.RequestException(errMsg)
-    return imgr.fetch_image(filepath, collection=collection)
+def fetch_image_by_filepath (args):
+    """ Fetch a specific image by filepath. """
+    filepath = parse_filepath_arg(args, required=True)  # get required filepath or error
+    return imgr.fetch_image_by_filepath(filepath)
 
 
 @celery.task()
-def get_image_metadata (args):
+def fetch_image_by_filter (args):
+    """ Fetch a specific image by filter/collection. """
+    collection = parse_collection_arg(args)
+    filt = parse_filter_arg(args, required=True)  # get required filter or error
+    return imgr.fetch_image_by_filter(filt, collection=collection)
+
+
+@celery.task()
+def image_metadata_by_filepath (args):
     """ Fetch image metadata for a specific image by filepath/collection. """
     collection = parse_collection_arg(args)
-    filepath = args.get('path')
-    if (not filepath):
-        errMsg = "An image file path must be specified, via the 'path' argument"
-        current_app.logger.error(errMsg)
-        raise exceptions.RequestException(errMsg)
-    return jsonify(imgr.get_image_metadata(filepath, collection=collection))
+    filepath = parse_filepath_arg(args, required=True)  # get required filepath or error
+    return jsonify(imgr.image_metadata_by_filepath(filepath, collection=collection))
+
+
+@celery.task()
+def image_metadata_by_filter (args):
+    """ Fetch image metadata for a specific image by filter/collection. """
+    collection = parse_collection_arg(args)
+    filt = parse_filter_arg(args, required=True)  # get required filter or error
+    return jsonify(imgr.image_metadata_by_filter(filt, collection=collection))
 
 
 @celery.task()
@@ -147,7 +154,7 @@ def get_cutout_by_filter (args):
     # parse the parameters for the cutout
     co_args = parse_cutout_args(args)
     collection = parse_collection_arg(args)
-    filt = parse_filter_arg(args, filterRequired=True)  # test for required filter
+    filt = parse_filter_arg(args, required=True)  # test for required filter
 
     # figure out which image to make a cutout from based on the cutout parameters
     image_filepath = imgr.match_image(co_args, collection=collection, match_fn=imgr.by_filter_matcher)
@@ -287,15 +294,30 @@ def parse_cutout_size (args):
     return co_args                          # return parsed, converted cutout arguments
 
 
-def parse_filter_arg (args, filterRequired=False):
+def parse_filepath_arg (args, required=False):
+    """
+    Parse out the file path argument, returning the file path string or None.
+    :raises: RequestException if no path given and the required flag is True.
+    """
+    filepath = args.get('path')
+    if (filepath is not None):
+        filepath = filepath.strip()
+        if ((not filepath) and required):
+            errMsg = "An image file path must be specified, via the 'path' argument"
+            current_app.logger.error(errMsg)
+            raise exceptions.RequestException(errMsg)
+    return filepath
+
+
+def parse_filter_arg (args, required=False):
     """
     Parse out the filter argument, returning the filter name string or None.
-    :raises: RequestException if no filter given and the filterRequired flag is True.
+    :raises: RequestException if no filter given and the required flag is True.
     """
     filt = args.get('filter')
     if (filt is not None):
         filt = filt.strip()
-        if ((not filt) and filterRequired):
+        if ((not filt) and required):
             errMsg = "An image filter must be specified, via the 'filter' argument"
             current_app.logger.error(errMsg)
             raise exceptions.RequestException(errMsg)
