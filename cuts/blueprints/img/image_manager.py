@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Rename *by_filename methods. Add *by_filter stubs. Add return_image_at_filepath.
+#   Last Modified: Remove enter/exit. Add filter arg to query_cone.
 #
 import os
 import sys
@@ -32,14 +32,6 @@ class ImageManager ():
         self.args = args                      # save arguments passed to this instance
         self._DEBUG = args.get('debug', False)
         self.pgsql = PostgreSQLManager(args)  # create a DB manager
-
-
-    def __enter__ (self):
-        return self
-
-
-    def __exit__ (self, exc_type, exc_value, traceback):
-        self.cleanup()
 
 
     def cleanup (self):
@@ -123,7 +115,7 @@ class ImageManager ():
         return paths
 
 
-    def query_cone (self, co_args, collection=None, select=DEFAULT_SELECT_FIELDS):
+    def query_cone (self, co_args, collection=None, filt=None, select=DEFAULT_SELECT_FIELDS):
         """
         Return a list of image metadata for images which contain a given point
         within a given radius. If an image collection is specified, restrict the search
@@ -134,7 +126,7 @@ class ImageManager ():
         radius = co_args.get('size')        # radius of cone in degrees required
 
         if (ra and dec and radius):
-            return self.pgsql.query_cone(ra, dec, radius, collection=collection, select=select)
+            return self.pgsql.query_cone(ra, dec, radius, collection=collection, filt=filt, select=select)
 
         else:
             errMsg = "'ra', 'dec', and a radius size (one of 'radius', 'sizeDeg', 'sizeArcMin', or 'sizeArcSec') must be specified."
