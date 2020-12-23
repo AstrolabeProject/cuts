@@ -2,7 +2,7 @@
 # Top-level Flask routing module: answers requests or spawns Celery task to do it.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Rename *by_filename methods. Add *by_filter methods.
+#   Last Modified: Change URLs for all cutout methods. Rename some cutout methods.
 #
 from flask import Blueprint, jsonify, request
 # from flask_cors import CORS
@@ -85,7 +85,7 @@ def query_cone ():
 # Image cutout methods
 #
 
-@img.route('/img/co/list')
+@img.route('/co/list')
 def co_list ():
     """ List all existing cutouts in the cutouts (cache) directory. """
     # required to avoid circular imports
@@ -93,15 +93,15 @@ def co_list ():
     return list_cutouts(request.args)
 
 
-@img.route('/img/co/fetch')
-def co_fetch ():
+@img.route('/co/fetch_by_filepath')
+def co_fetch_by_filepath ():
     """ Fetch a specific cutout by filepath. """
     # required to avoid circular imports
-    from cuts.blueprints.img.tasks import fetch_cutout
-    return fetch_cutout(request.args)
+    from cuts.blueprints.img.tasks import fetch_cutout_by_filepath
+    return fetch_cutout_by_filepath(request.args)
 
 
-@img.route('/img/co/cutout')
+@img.route('/co/cutout')
 def co_cutout ():
     """ Make and return an image cutout. """
     # required to avoid circular imports
@@ -109,12 +109,12 @@ def co_cutout ():
     return get_cutout(request.args)
 
 
-@img.route('/img/co/cutout_by_filter')
+@img.route('/co/cutout_by_filter')
 def co_cutout_by_filter ():
     """ Make and return an image cutout for an image in a certain bandwidth. """
     # required to avoid circular imports
-    from cuts.blueprints.img.tasks import get_cutout_by_filter
-    return get_cutout_by_filter(request.args)
+    from cuts.blueprints.img.tasks import cutout_by_filter
+    return cutout_by_filter(request.args)
 
 
 @img.route('/echo')
