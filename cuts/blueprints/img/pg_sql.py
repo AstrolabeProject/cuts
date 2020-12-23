@@ -1,7 +1,7 @@
 #
 # Class to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Rename method to image_metadata_by_filepath.
+#   Last Modified: Extend query_cone to take select fields, collection, and/or filter.
 #
 import sys
 
@@ -197,11 +197,14 @@ class PostgreSQLManager (ISQLBase):
         return tables
 
 
-    def query_cone (self, center_ra, center_dec, radius, collection=None, select=None):
+    def query_cone (self, center_ra, center_dec, radius, collection=None, filt=None, select=None):
         """
         List metadata for images containing the given point within the given radius.
 
         :param collection: if specified, restrict the listing to the named image collection.
+        :param filt: if specified, restrict the listing to images with the named filter.
+        :param select: a optional list of fields to be returned in the query (default ALL fields).
+
         :return a list of metadata dictionaries for images which contain the specified point.
         """
         image_table = self.clean_table_name()
@@ -211,21 +214,31 @@ class PostgreSQLManager (ISQLBase):
         else:
             fields = '*'
 
-        if (collection is not None):            # list all image paths
-            coll_clean = self.clean_id(collection)
-            imgq = """
-                SELECT {} from {}
-                WHERE obs_collection = (%s)
-                AND q3c_radial_query(s_ra, s_dec, (%s), (%s), (%s)) = TRUE;
-            """.format(fields, image_table)
-            rows = self.fetch_rows_2dicts(imgq, [coll_clean, center_ra, center_dec, radius])
+        imgq = "SELECT {} FROM {}".format(fields, image_table)
+        qargs = []                              # no query arguments yet
 
-        else:                                   # list only image paths in given collection
-            imgq = """
-                SELECT {} from {}
-                WHERE q3c_radial_query(s_ra, s_dec, (%s), (%s), (%s)) = TRUE;
-            """.format(fields, image_table)
-            rows = self.fetch_rows_2dicts(imgq, [center_ra, center_dec, radius])
+        where = False
+        if (collection is not None):            # add collection argument to query
+            imgq = imgq + " WHERE obs_collection = (%s)"
+            qargs.append(self.clean_id(collection))
+            where = True
+
+        if (filt is not None):
+            if (where):
+                imgq += " AND"
+            else:
+                imgq += " WHERE"
+                where = True
+            imgq += " filter = (%s)"
+            qargs.append(self.clean_id(filt))
+
+        if (where):
+            imgq += " AND" if where else " WHERE"
+            imgq += " q3c_radial_query(s_ra, s_dec, (%s), (%s), (%s)) = TRUE"
+            imgq += " ORDER BY id;"
+            qargs.extend([center_ra, center_dec, radius])
+
+        rows = self.fetch_rows_2dicts(imgq, qargs)
 
         if (self._DEBUG):
             print("(query_cone): => '{}'".format(rows), file=sys.stderr)
