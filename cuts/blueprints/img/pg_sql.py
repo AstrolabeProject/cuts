@@ -1,7 +1,7 @@
 #
 # Class to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Extend query_cone to take select fields, collection, and/or filter.
+#   Last Modified: Add query_image method.
 #
 import sys
 
@@ -237,6 +237,52 @@ class PostgreSQLManager (ISQLBase):
             imgq += " q3c_radial_query(s_ra, s_dec, (%s), (%s), (%s)) = TRUE"
             imgq += " ORDER BY id;"
             qargs.extend([center_ra, center_dec, radius])
+
+        rows = self.fetch_rows_2dicts(imgq, qargs)
+
+        if (self._DEBUG):
+            print("(query_cone): => '{}'".format(rows), file=sys.stderr)
+
+        return rows
+
+
+    def query_image (self, collection=None, filt=None, select=None):
+        """
+        Return a list of selected image metadata fields for images which meet the
+        given filter and/or collection criteria.
+
+        :param collection: if specified, restrict the listing to the named image collection.
+        :param filt: if specified, restrict the listing to images with the named filter.
+        :param select: a optional list of fields to be returned in the query (default ALL fields).
+
+        :return a list of metadata dictionaries for images which contain the specified point.
+        """
+        image_table = self.clean_table_name()
+
+        if (select is not None):
+            fields = ','.join([self.clean_id(fld) for fld in select])
+        else:
+            fields = '*'
+
+        imgq = "SELECT {} FROM {}".format(fields, image_table)
+        qargs = []                              # no query arguments yet
+
+        where = False
+        if (collection is not None):            # add collection argument to query
+            imgq = imgq + " WHERE obs_collection = (%s)"
+            qargs.append(self.clean_id(collection))
+            where = True
+
+        if (filt is not None):
+            if (where):
+                imgq += " AND"
+            else:
+                imgq += " WHERE"
+                where = True
+            imgq += " filter = (%s)"
+            qargs.append(self.clean_id(filt))
+
+        imgq += " ORDER BY id;"
 
         rows = self.fetch_rows_2dicts(imgq, qargs)
 

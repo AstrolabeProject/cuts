@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Remove enter/exit. Add filter arg to query_cone.
+#   Last Modified: Add query_image method.
 #
 import os
 import sys
@@ -132,6 +132,18 @@ class ImageManager ():
             errMsg = "'ra', 'dec', and a radius size (one of 'radius', 'sizeDeg', 'sizeArcMin', or 'sizeArcSec') must be specified."
             current_app.logger.error(errMsg)
             raise exceptions.RequestException(errMsg)
+
+
+    def query_image (self, collection=None, filt=None, select=DEFAULT_SELECT_FIELDS):
+        """
+        Return a list of selected image metadata fields for images which meet the
+        given filter and/or collection criteria.
+
+        :param collection: if specified, restrict the listing to the named image collection.
+        :param filt: if specified, restrict the listing to images with the named filter.
+        :param select: a optional list of fields to be returned in the query (default ALL fields).
+        """
+        return self.pgsql.query_image(collection=collection, filt=filt, select=select)
 
 
     def return_image_at_filepath (self, filepath, mimetype=FITS_MIME_TYPE):

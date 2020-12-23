@@ -80,6 +80,14 @@ def query_cone ():
     return query_cone(request.args)
 
 
+@img.route('/img/query_image')
+def query_image ():
+    """ List images which meet the given filter and collection criteria. """
+    # required to avoid circular imports
+    from cuts.blueprints.img.tasks import query_image
+    return query_image(request.args)
+
+
 
 #
 # Image cutout methods
