@@ -2,7 +2,7 @@
 # Module to containing spawnable Celery tasks for the application.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Add parse_filepath_arg. Rename *by_filename methods. Add *by_filter methods.
+#   Last Modified: Add filter arg to query_cone. Add query_image method. Rename/work on cutout_by_filter.
 #
 import os
 
@@ -20,6 +20,7 @@ from config.settings import CUTOUTS_DIR, CUTOUTS_MODE, FITS_MIME_TYPE
 import cuts.blueprints.img.file_utils as file_utils
 from cuts.app import create_celery_app
 from cuts.blueprints.img import exceptions
+from cuts.blueprints.img.fits_utils import fits_file_exists
 from cuts.blueprints.img.image_manager import ImageManager
 
 
@@ -91,7 +92,16 @@ def query_cone (args):
     # parse the parameters for the location, radius, and collection
     co_args = parse_cutout_args(args)
     collection = parse_collection_arg(args)
-    return jsonify(imgr.query_cone(co_args, collection=collection))
+    filt = parse_filter_arg(args)
+    return jsonify(imgr.query_cone(co_args, collection=collection, filt=filt))
+
+
+@celery.task()
+def query_image (args):
+    """ List images which meet the given filter and collection criteria. """
+    collection = parse_collection_arg(args)
+    filt = parse_filter_arg(args)
+    return jsonify(imgr.query_image(collection=collection, filt=filt))
 
 
 
@@ -107,7 +117,7 @@ def list_cutouts (args):
 
 
 @celery.task()
-def fetch_cutout (args):
+def fetch_cutout_by_filepath (args):
     """ Fetch a specific image cutout by filepath. """
     filepath = args.get('path')
     if (not filepath):
@@ -133,7 +143,7 @@ def get_cutout (args):
         raise exceptions.RequestException(errMsg)
 
     if (not co_args.get('co_size')):        # if no size specified, return the entire image
-        return imgr.return_image(image_filepath) # exit and return entire image
+        return imgr.return_image_at_filepath(image_filepath) # exit and return entire image
 
     # actually make the cutout
     hdu = fits.open(image_filepath)[0]
@@ -147,9 +157,9 @@ def get_cutout (args):
 
 
 @celery.task()
-def get_cutout_by_filter (args):
+def cutout_by_filter (args):
     """ Make and return an image cutout for a filtered image.
-        The band is specified by the non-optional 'filter' argument. """
+        The band is specified by the required 'filter' argument. """
 
     # parse the parameters for the cutout
     co_args = parse_cutout_args(args)
@@ -157,14 +167,16 @@ def get_cutout_by_filter (args):
     filt = parse_filter_arg(args, required=True)  # test for required filter
 
     # figure out which image to make a cutout from based on the cutout parameters
-    image_filepath = imgr.match_image(co_args, collection=collection, match_fn=imgr.by_filter_matcher)
-    if (not image_filepath):
+    image_matches = imgr.query_cone(co_args, collection=collection, filt=filt)
+    if (not image_matches):
         errMsg = f"An image was not found for filter {filt} in images directory"
         current_app.logger.error(errMsg)
         raise exceptions.RequestException(errMsg)
+    else:
+        image_filepath = image_matches[0].get('file_path')
 
     if (not co_args.get('co_size')):        # if no size specified, return the entire image
-        return imgr.return_image(image_filepath) # exit and return entire image
+        return imgr.return_image_at_filepath(image_filepath) # exit and return entire image
 
     # actually make the cutout
     hdu = fits.open(image_filepath)[0]
@@ -327,7 +339,7 @@ def parse_filter_arg (args, required=False):
 def return_cutout (co_filename, mimetype=FITS_MIME_TYPE):
     """ Return the named cutout file, giving it the specified MIME type. """
     co_filepath = os.path.join(CUTOUTS_DIR, co_filename)
-    if (imgr.fits_file_exists(co_filepath)):
+    if (fits_file_exists(co_filepath)):
         return send_from_directory(CUTOUTS_DIR, co_filename, mimetype=mimetype,
                                    as_attachment=True, attachment_filename=co_filename)
     errMsg = f"Specified image cutout file '{co_filename}' not found in cutouts directory"
