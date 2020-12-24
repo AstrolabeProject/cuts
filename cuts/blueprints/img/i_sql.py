@@ -1,7 +1,7 @@
 #
 # Base class for common methods to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Add method to return array of row dictionaries from query.
+#   Last Modified: Add method to fetch a single row.
 #
 import configparser
 import sys
@@ -97,6 +97,28 @@ class ISQLBase ():
                     cursor.execute(sql_query_string, sql_values)
         finally:
             conn.close()
+
+
+    def fetch_row (self, sql_query_string, sql_values):
+        """
+        Open a database connection and execute the given SQL format string with
+        the given SQL values, returning a single query result (a tuple) or None.
+
+        :param sql_query_string: a valid Psycopg2 query string. This is similar to a
+            standard python template string, BUT NOT THE SAME. See:
+            https://www.psycopg.org/docs/usage.html#passing-parameters-to-sql-queries
+        :param sql_value: a list of values to substitute into the query string.
+        """
+        conn = psycopg2.connect(self.db_uri)
+        try:
+            with conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(sql_query_string, sql_values)
+                    row = cursor.fetchone()
+        finally:
+            conn.close()
+
+        return row
 
 
     def fetch_rows (self, sql_query_string, sql_values):
