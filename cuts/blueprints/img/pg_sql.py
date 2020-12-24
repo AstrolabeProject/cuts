@@ -1,7 +1,7 @@
 #
 # Class to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Add query_image method.
+#   Last Modified: Redo image metadata methods. Add image_path_from_id.
 #
 import sys
 
@@ -18,6 +18,7 @@ class PostgreSQLManager (ISQLBase):
 
     DEFAULT_SCHEMA_NAME = 'sia'
     DEFAULT_SQL_IMAGE_MD_TABLE = 'jwst'
+    DEFAULT_QUERY_FIELDS = [ 'id', 'file_path' ]
 
 
     def __init__(self, args={}):
@@ -37,32 +38,111 @@ class PostgreSQLManager (ISQLBase):
         return f"{schema_clean}.{table_clean}"
 
 
-    def image_metadata_by_filepath (self, filepath, collection=None):
+    def image_path_from_id (self, uid=0):
         """
-        Return the image metadata for the file at the given filepath.
-
-        :param filepath: filepath of the image whose metadata is desired.
-        :param collection: optional name of the image collection to use or all, if None.
-        :return an array of dictionaries representing the records from the image metadata table.
+        Return an image path string for the specified ID value. Returns None if the
+        indexed record is not present in the table.
         """
         image_table = self.clean_table_name()
 
-        if (collection is not None):            # list only image paths in given collection
-            coll_clean = self.clean_id(collection)
-            imgq = """
-                SELECT * FROM {}
-                WHERE file_path = (%s) and obs_collection = (%s);
-            """.format(image_table)
-            metadata = self.fetch_rows_2dicts(imgq, [filepath, coll_clean])
-
-        else:                                   # list all image paths
-            imgq = "SELECT * FROM {} WHERE file_path = (%s);".format(image_table)
-            metadata = self.fetch_rows_2dicts(imgq, [filepath])
+        imgq = "SELECT id, file_path FROM {} WHERE id = (%s)".format(image_table)
+        row = self.fetch_row(imgq, [uid])
+        ipath = row[0] if row else None         # assume: ID field is always the first field
 
         if (self._DEBUG):
-            print("(image_metadata_by_filepath): => '{}'".format(metadata), file=sys.stderr)
+            print("(image_path_from_id): => '{}'".format(ipath), file=sys.stderr)
 
-        return metadata                         # return array of dictionaries
+        return ipath
+
+
+    def image_metadata (self, uid=0, select=None):
+        """
+        Return a singleton (or empty) list of image metadata fields for the identified image.
+        :param select: an optional list of metadata fields to be returned (default ALL fields).
+        :return a dictionary of metadata for the image with the specified ID or
+                None if no metadata record found for the specified ID.
+        """
+        image_table = self.clean_table_name()
+        fields = self.sql4_selected_fields(select)
+
+        imgq = "SELECT {} FROM {} WHERE id = (%s)".format(fields, image_table)
+        rows = self.fetch_rows_2dicts(imgq, [uid])
+        imd = rows[0] if rows else None
+
+        if (self._DEBUG):
+            print("(image_metadata): => '{}'".format(imd), file=sys.stderr)
+
+        return imd
+
+
+    def image_metadata_by_path (self, ipath, collection=None, select=None):
+        """
+        Return the image metadata for the file at the given image path.
+
+        :param ipath: image path of the image whose metadata is desired.
+        :param collection: optional name of the image collection to use or all, if None.
+        :return a list of dictionaries representing the records from the image metadata table.
+        """
+        image_table = self.clean_table_name()
+        fields = self.sql4_selected_fields(select)
+
+        imgq = "SELECT {} FROM {} WHERE file_path = (%s)".format(fields, image_table)
+        qargs = [ipath]
+
+        if (collection is not None):            # list only image paths in given collection
+            imgq += " AND obs_collection = (%s)"
+            qargs.append(self.clean_id(collection))
+
+        imgq += " ORDER BY id;"
+
+        metadata = self.fetch_rows_2dicts(imgq, qargs)
+
+        if (self._DEBUG):
+            print("(image_metadata_by_path): => '{}'".format(metadata), file=sys.stderr)
+
+        return metadata                         # return list of dictionaries
+
+
+    def image_metadata_by_query (self, collection=None, filt=None, select=None):
+        """
+        Return a list of selected image metadata fields for images which meet the
+        given filter and/or collection criteria.
+
+        :param collection: if specified, restrict the listing to the named image collection.
+        :param filt: if specified, restrict the listing to images with the named filter.
+        :param select: an optional list of fields to be returned in the query (default ALL fields).
+
+        :return a list of metadata dictionaries for images which contain the specified point.
+        """
+        image_table = self.clean_table_name()
+        fields = self.sql4_selected_fields(select)
+
+        imgq = "SELECT {} FROM {}".format(fields, image_table)
+        qargs = []                              # no query arguments yet
+
+        where = False
+        if (collection is not None):            # add collection argument to query
+            imgq += " WHERE obs_collection = (%s)"
+            qargs.append(self.clean_id(collection))
+            where = True
+
+        if (filt is not None):
+            if (where):
+                imgq += " AND"
+            else:
+                imgq += " WHERE"
+                where = True
+            imgq += " filter = (%s)"
+            qargs.append(self.clean_id(filt))
+
+        imgq += " ORDER BY id;"
+
+        rows = self.fetch_rows_2dicts(imgq, qargs)
+
+        if (self._DEBUG):
+            print("(image_metadata_by_query): => '{}'".format(rows), file=sys.stderr)
+
+        return rows
 
 
     def list_catalog_tables (self, db_schema=None):
@@ -203,7 +283,7 @@ class PostgreSQLManager (ISQLBase):
 
         :param collection: if specified, restrict the listing to the named image collection.
         :param filt: if specified, restrict the listing to images with the named filter.
-        :param select: a optional list of fields to be returned in the query (default ALL fields).
+        :param select: an optional list of fields to be returned in the query (default ALL fields).
 
         :return a list of metadata dictionaries for images which contain the specified point.
         """
@@ -219,7 +299,7 @@ class PostgreSQLManager (ISQLBase):
 
         where = False
         if (collection is not None):            # add collection argument to query
-            imgq = imgq + " WHERE obs_collection = (%s)"
+            imgq += " WHERE obs_collection = (%s)"
             qargs.append(self.clean_id(collection))
             where = True
 
@@ -246,47 +326,13 @@ class PostgreSQLManager (ISQLBase):
         return rows
 
 
-    def query_image (self, collection=None, filt=None, select=None):
+    def sql4_selected_fields (self, select=None):
         """
-        Return a list of selected image metadata fields for images which meet the
-        given filter and/or collection criteria.
-
-        :param collection: if specified, restrict the listing to the named image collection.
-        :param filt: if specified, restrict the listing to images with the named filter.
-        :param select: a optional list of fields to be returned in the query (default ALL fields).
-
-        :return a list of metadata dictionaries for images which contain the specified point.
+        Format the given list of field names to and return a string to select fields
+        in an SQL SELECT statement. Returns None is the given list is empty or None.
         """
-        image_table = self.clean_table_name()
-
         if (select is not None):
             fields = ','.join([self.clean_id(fld) for fld in select])
         else:
             fields = '*'
-
-        imgq = "SELECT {} FROM {}".format(fields, image_table)
-        qargs = []                              # no query arguments yet
-
-        where = False
-        if (collection is not None):            # add collection argument to query
-            imgq = imgq + " WHERE obs_collection = (%s)"
-            qargs.append(self.clean_id(collection))
-            where = True
-
-        if (filt is not None):
-            if (where):
-                imgq += " AND"
-            else:
-                imgq += " WHERE"
-                where = True
-            imgq += " filter = (%s)"
-            qargs.append(self.clean_id(filt))
-
-        imgq += " ORDER BY id;"
-
-        rows = self.fetch_rows_2dicts(imgq, qargs)
-
-        if (self._DEBUG):
-            print("(query_cone): => '{}'".format(rows), file=sys.stderr)
-
-        return rows
+        return fields
