@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Add query_image method.
+#   Last Modified: WIP: Update for redo of fetch and metadata methods.
 #
 import os
 import sys
@@ -39,16 +39,13 @@ class ImageManager ():
         pass
 
 
-    def fetch_image_by_filepath (self, filepath, mimetype=FITS_MIME_TYPE):
+    def fetch_image (self, uid, mimetype=FITS_MIME_TYPE):
         """
-        Directly read and return the image at the specified device path. Handles
-        dispatching to fetch methods for different storage devices (e.g., local disk, iRods)
+        Read and return the image with the specified ID. Handles dispatching
+        to fetch methods for different storage devices (e.g., local disk, iRods)
         """
-        if (self.is_irods_file(filepath)):
-            # TODO: IMPLEMENT iRods fetch image
-            raise exceptions.ImageNotFound(errMsg)
-        else:
-            return self.return_image_at_filepath(filepath, mimetype=mimetype)
+        ipath = self.pgsql.image_path_from_id(uid)
+        return self.return_image_at_path(ipath, mimetype=mimetype) if ipath else None
 
 
     def fetch_image_by_filter (self, filt, collection=None, mimetype=FITS_MIME_TYPE):
@@ -57,32 +54,60 @@ class ImageManager ():
         to fetch methods for different storage devices (e.g., local disk, iRods).
         If no collection is given, then the last image with the specified filter is used.
         """
-        # TODO: IMPLEMENT LATER
-        # with_filter = self.pgsql.query_by_filter
-        # if (with_filter):
-        #     filepath = with_filter[0].get('file_path')
-        #     # TODO: check for empty filepath
-        #     return self.return_image_at_filepath(filepath, mimetype=mimetype)
-        return None                         # TODO: IMPLEMENT LATER
+        filtered = self.pgsql.image_metadata_by_query(collection=collection, filt=filt)
+        if (filtered):
+            ipath = filtered[0].get('file_path')
+            if (ipath):
+                return self.return_image_at_path(ipath, mimetype=mimetype)
+        return None
 
 
-    def image_metadata_by_filepath (self, filepath, collection=None):
+    def fetch_image_by_path (self, ipath, mimetype=FITS_MIME_TYPE):
         """
-        Find and return the metadata for the image at the specified path, in the
-        optionally specified collection. If no collection is given, then the
-        first image with the specified path is used.
+        Directly read and return the image at the specified image path. Handles
+        dispatching to fetch methods for different storage devices (e.g., local disk, iRods)
         """
-        return self.pgsql.image_metadata_by_filepath(filepath, collection=collection)
+        if (ipath):                         # sanity check
+            return self.return_image_at_path(ipath.strip(), mimetype=mimetype)
+        else:
+            return None
+
+
+    def image_metadata (self, uid, select=None):
+        """
+        Return an image metadata dictionary for the identified image.
+        :param select: an optional list of metadata fields to be returned (default ALL fields).
+        :return a singleton list of metadata dictionary for the image with the specified ID or
+                an empty list if no metadata record found for the specified ID.
+        """
+        return self.image_metadata(uid, select=select)
+
+
+    def image_metadata_by_collection (self, collection):
+        """
+        Return a list of image metadata dictionaries for all images in the specified collection.
+        """
+        return self.pgsql.image_metadata_by_query(collection=collection)
+
+
+    def image_metadata_by_path (self, ipath, collection=None):
+        """
+        Find and return the metadata for the image at the specified image path,
+        in the optionally specified collection. If no collection is given, then the
+        most recently added image with the specified path is used.
+        """
+        if (ipath):                         # sanity check
+            return self.pgsql.image_metadata_by_path(ipath.strip(), collection=collection)
+        else:
+            return None
 
 
     def image_metadata_by_filter (self, filt, collection=None):
         """
-        Find and return the metadata for the most recent image with the specified filter.
-        If no collection is given, then the most recent image with the specified filter is used.
+        Return a list of image metadata dictionaries for all images with the specified filter.
+        If a collection name is specified, the listing is restricted to the named collection.
         """
-        # TODO: IMPLEMENT LATER
-        # return self.pgsql.image_metadata_by_filter(filt, collection=collection)
-        return []                           # TODO: IMPLEMENT LATER
+        return self.pgsql.image_metadata_by_query(filt=filt, collection=collection)
 
 
     def is_irods_file (self, filepath):
@@ -156,3 +181,16 @@ class ImageManager ():
             errMsg = f"Specified image file '{filepath}' not found"
             current_app.logger.error(errMsg)
             raise exceptions.ImageNotFound(errMsg)
+
+
+    def return_image_at_path (self, ipath, mimetype=FITS_MIME_TYPE):
+        """
+        Read and return the image at the specified device path. Handles dispatching
+        to fetch methods for different storage devices (e.g., local disk, iRods).
+        """
+        if (self.is_irods_file(ipath)):
+            # TODO: IMPLEMENT iRods fetch image
+            raise exceptions.ImageNotFound(errMsg)
+
+        else:
+            return self.return_image_at_filepath(ipath, mimetype=mimetype)
