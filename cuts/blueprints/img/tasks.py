@@ -2,7 +2,7 @@
 # Module to containing spawnable Celery tasks for the application.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Add filter arg to query_cone. Add query_image method. Rename/work on cutout_by_filter.
+#   Last Modified: Redo fetch and metadata methods. Add/use parse_id_arg method.
 #
 import os
 
@@ -32,39 +32,63 @@ imgr = ImageManager()
 
 
 #
-# Full image methods
+# Image methods
 #
 
 @celery.task()
-def fetch_image_by_filepath (args):
-    """ Fetch a specific image by filepath. """
-    filepath = parse_filepath_arg(args, required=True)  # get required filepath or error
-    return imgr.fetch_image_by_filepath(filepath)
+def fetch_image (args):
+    """ Fetch a specific image by ID. """
+    uid = parse_id_arg(args)                # get required ID or error
+    return imgr.fetch_image(uid)
 
 
 @celery.task()
 def fetch_image_by_filter (args):
     """ Fetch a specific image by filter/collection. """
-    collection = parse_collection_arg(args)
     filt = parse_filter_arg(args, required=True)  # get required filter or error
+    collection = parse_collection_arg(args)
     return imgr.fetch_image_by_filter(filt, collection=collection)
 
 
 @celery.task()
-def image_metadata_by_filepath (args):
-    """ Fetch image metadata for a specific image by filepath/collection. """
-    collection = parse_collection_arg(args)
-    filepath = parse_filepath_arg(args, required=True)  # get required filepath or error
-    return jsonify(imgr.image_metadata_by_filepath(filepath, collection=collection))
+def fetch_image_by_path (args):
+    """ Fetch a specific image by image path. """
+    ipath = parse_ipath_arg(args, required=True)  # get required image path or error
+    return imgr.fetch_image_by_path(ipath)
+
+
+#############################################################
+
+@celery.task()
+def image_metadata (args):
+    """ Return image metadata for a specific image by ID. """
+    uid = parse_id_arg(args)                      # get required ID or error
+    return jsonify(imgr.image_metadata(uid))
+
+
+@celery.task()
+def image_metadata_by_collection (args):
+    """ Return image metadata for all images in a specific collection. """
+    collection = parse_collection_arg(args, required=True)  # get required collection or error
+    return jsonify(imgr.image_metadata_by_collection(collection))
 
 
 @celery.task()
 def image_metadata_by_filter (args):
-    """ Fetch image metadata for a specific image by filter/collection. """
-    collection = parse_collection_arg(args)
+    """ Return image metadata for all images with a specific filter/collection. """
     filt = parse_filter_arg(args, required=True)  # get required filter or error
+    collection = parse_collection_arg(args)       # optional collection restriction
     return jsonify(imgr.image_metadata_by_filter(filt, collection=collection))
 
+
+@celery.task()
+def image_metadata_by_path (args):
+    """ Return image metadata for a specific image by image path. """
+    ipath = parse_ipath_arg(args, required=True)  # get required image path or error
+    return jsonify(imgr.image_metadata_by_path(ipath))
+
+
+#############################################################
 
 @celery.task()
 def list_collections (args):
@@ -75,14 +99,14 @@ def list_collections (args):
 @celery.task()
 def list_filters (args):
     """ List image filters found in the image metadata table. """
-    collection = parse_collection_arg(args)
+    collection = parse_collection_arg(args)       # optional collection restriction
     return jsonify(imgr.list_filters(collection=collection))
 
 
 @celery.task()
 def list_image_paths (args):
     """ List paths to FITS images from the image metadata table. """
-    collection = parse_collection_arg(args)
+    collection = parse_collection_arg(args)       # optional collection restriction
     return jsonify(imgr.list_image_paths(collection=collection))
 
 
@@ -91,16 +115,16 @@ def query_cone (args):
     """ List images which contain the given point within a given radius. """
     # parse the parameters for the location, radius, and collection
     co_args = parse_cutout_args(args)
-    collection = parse_collection_arg(args)
-    filt = parse_filter_arg(args)
+    collection = parse_collection_arg(args)       # optional collection restriction
+    filt = parse_filter_arg(args)                 # optional filter restriction
     return jsonify(imgr.query_cone(co_args, collection=collection, filt=filt))
 
 
 @celery.task()
 def query_image (args):
     """ List images which meet the given filter and collection criteria. """
-    collection = parse_collection_arg(args)
-    filt = parse_filter_arg(args)
+    collection = parse_collection_arg(args)       # optional collection restriction
+    filt = parse_filter_arg(args)                 # optional filter restriction
     return jsonify(imgr.query_image(collection=collection, filt=filt))
 
 
@@ -117,7 +141,7 @@ def list_cutouts (args):
 
 
 @celery.task()
-def fetch_cutout_by_filepath (args):
+def fetch_cutout_by_path (args):
     """ Fetch a specific image cutout by filepath. """
     filepath = args.get('path')
     if (not filepath):
@@ -225,13 +249,20 @@ def make_cutout_filename (image_filepath, cutout, co_args, collection=None):
     return f"{coll}_{basename}__{ra}_{dec}_{shape[0]}x{shape[1]}.fits"
 
 
-def parse_collection_arg (args):
-    """ Parse out the collection argument, returning the collection name string or None,
-        if no collection argument given. """
+def parse_collection_arg (args, required=False):
+    """
+    Parse out the collection argument, returning the collection name string or None,
+    if no collection argument given.
+    :raises: RequestException if no collection given and the required flag is True.
+    """
     collection = args.get('collection', args.get('coll'))
     if (collection is not None):
-        return collection.strip()
-    return None
+        collection = collection.strip()
+        if ((not collection) and required):
+            errMsg = "A collection name must be specified, via the 'collection' argument"
+            current_app.logger.error(errMsg)
+            raise exceptions.RequestException(errMsg)
+    return collection
 
 
 def parse_coordinate_args (args):
@@ -306,7 +337,7 @@ def parse_cutout_size (args):
     return co_args                          # return parsed, converted cutout arguments
 
 
-def parse_filepath_arg (args, required=False):
+def parse_ipath_arg (args, required=False):
     """
     Parse out the file path argument, returning the file path string or None.
     :raises: RequestException if no path given and the required flag is True.
@@ -334,6 +365,30 @@ def parse_filter_arg (args, required=False):
             current_app.logger.error(errMsg)
             raise exceptions.RequestException(errMsg)
     return filt
+
+
+def parse_id_arg (args, required=True):
+    """
+    Parse out the unique ID argument, returning the ID or None, if no ID
+    argument is given or if the ID is not covertible to a positive integer > 0.
+    :raises: RequestException if no ID given and the required flag is True.
+    """
+    uid = args.get('id')
+    if (uid is not None):
+        uid = uid.strip()
+        try:
+            num = int(uid)
+            if (num > 0):
+                return num
+        except ValueError:
+            pass                            # drop through to error
+
+    if (not required):
+        return None
+    else:
+        errMsg = "A record ID must be specified, via the 'id' argument"
+        current_app.logger.error(errMsg)
+        raise exceptions.RequestException(errMsg)
 
 
 def return_cutout (co_filename, mimetype=FITS_MIME_TYPE):
