@@ -2,7 +2,7 @@
 # Top-level Flask routing module: answers requests or spawns Celery task to do it.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Change URLs for all cutout methods. Rename some cutout methods.
+#   Last Modified: Redo fetch and metadata methods.
 #
 from flask import Blueprint, jsonify, request
 # from flask_cors import CORS
@@ -16,37 +16,64 @@ img = Blueprint('img', __name__, template_folder='templates')
 #
 # Image methods
 #
-@img.route('/img/fetch_by_filepath')
-def img_fetch_by_filepath ():
-    """ Fetch a specific image by filepath. """
+@img.route('/img/fetch')
+def img_fetch ():
+    """ Fetch a specific image by ID. """
     # required to avoid circular imports
-    from cuts.blueprints.img.tasks import fetch_image_by_filepath
-    return fetch_image_by_filepath(request.args)
+    from cuts.blueprints.img.tasks import fetch_image
+    return fetch_image(request.args)
 
 
 @img.route('/img/fetch_by_filter')
 def img_fetch_by_filter ():
-    """ Fetch a specific image by image filter/collection. """
+    """ Fetch one image by image filter/collection. """
     # required to avoid circular imports
     from cuts.blueprints.img.tasks import fetch_image_by_filter
     return fetch_image_by_filter(request.args)
 
 
-@img.route('/img/metadata_by_filepath')
-def img_metadata_by_filepath ():
-    """ Fetch image metadata for a specific image by filepath/collection. """
+@img.route('/img/fetch_by_path')
+def img_fetch_by_path ():
+    """ Fetch a specific image by image path. """
     # required to avoid circular imports
-    from cuts.blueprints.img.tasks import image_metadata_by_filepath
-    return image_metadata_by_filepath(request.args)
+    from cuts.blueprints.img.tasks import fetch_image_by_path
+    return fetch_image_by_path(request.args)
+
+#############################################################
+
+@img.route('/img/metadata')
+def img_metadata ():
+    """ Return image metadata for a specific image by ID. """
+    # required to avoid circular imports
+    from cuts.blueprints.img.tasks import image_metadata
+    return image_metadata(request.args)
+
+
+@img.route('/img/metadata_by_collection')
+def img_metadata_by_collection ():
+    """ Return image metadata for all images in a specific image collection. """
+    # required to avoid circular imports
+    from cuts.blueprints.img.tasks import image_metadata_by_collection
+    return image_metadata_by_collection(request.args)
 
 
 @img.route('/img/metadata_by_filter')
 def img_metadata_by_filter ():
-    """ Fetch image metadata for a specific image by filter/collection. """
+    """ Return image metadata for all images with a specific filter/collection. """
     # required to avoid circular imports
     from cuts.blueprints.img.tasks import image_metadata_by_filter
     return image_metadata_by_filter(request.args)
 
+
+@img.route('/img/metadata_by_path')
+def img_metadata_by_path ():
+    """ Return image metadata for a specific image by image path. """
+    # required to avoid circular imports
+    from cuts.blueprints.img.tasks import image_metadata_by_path
+    return image_metadata_by_path(request.args)
+
+
+#############################################################
 
 @img.route('/img/list_collections')
 def list_collections ():
@@ -55,6 +82,13 @@ def list_collections ():
     from cuts.blueprints.img.tasks import list_collections
     return list_collections(request.args)
 
+@img.route('/img/list_filters')
+def list_filters ():
+    """ List image filters found in the image metadata table. """
+    # required to avoid circular imports
+    from cuts.blueprints.img.tasks import list_filters
+    return list_filters(request.args)
+
 
 @img.route('/img/list_image_paths')
 def list_image_paths ():
@@ -62,14 +96,6 @@ def list_image_paths ():
     # required to avoid circular imports
     from cuts.blueprints.img.tasks import list_image_paths
     return list_image_paths(request.args)
-
-
-@img.route('/img/list_filters')
-def list_filters ():
-    """ List image filters found in the image metadata table. """
-    # required to avoid circular imports
-    from cuts.blueprints.img.tasks import list_filters
-    return list_filters(request.args)
 
 
 @img.route('/img/query_cone')
@@ -101,12 +127,12 @@ def co_list ():
     return list_cutouts(request.args)
 
 
-@img.route('/co/fetch_by_filepath')
-def co_fetch_by_filepath ():
-    """ Fetch a specific cutout by filepath. """
+@img.route('/co/fetch_by_path')
+def co_fetch_by_path ():
+    """ Fetch a specific cutout by image path/collection. """
     # required to avoid circular imports
-    from cuts.blueprints.img.tasks import fetch_cutout_by_filepath
-    return fetch_cutout_by_filepath(request.args)
+    from cuts.blueprints.img.tasks import fetch_cutout_by_path
+    return fetch_cutout_by_path(request.args)
 
 
 @img.route('/co/cutout')
