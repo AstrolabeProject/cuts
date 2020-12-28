@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: WIP: Update for redo of fetch and metadata methods.
+#   Last Modified: Refactor: move cutout work here, cleanups.
 #
 import os
 import sys
@@ -11,11 +11,14 @@ import pathlib as pl
 
 from flask import current_app, request, send_from_directory
 
+from astropy import units as u
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
+from astropy.nddata import Cutout2D
+from astropy.nddata.utils import NoOverlapError, PartialOverlapError
 from astropy.wcs import WCS
 
-from config.settings import FITS_IMAGE_EXTS, FITS_MIME_TYPE, IMAGES_DIR
+from config.settings import CUTOUTS_DIR, CUTOUTS_MODE, FITS_IMAGE_EXTS, FITS_MIME_TYPE, IMAGES_DIR
 import cuts.blueprints.img.exceptions as exceptions
 from cuts.blueprints.img.fits_utils import fits_file_exists
 from cuts.blueprints.img.pg_sql import PostgreSQLManager
@@ -41,11 +44,11 @@ class ImageManager ():
 
     def fetch_image (self, uid, mimetype=FITS_MIME_TYPE):
         """
-        Read and return the image with the specified ID. Handles dispatching
-        to fetch methods for different storage devices (e.g., local disk, iRods)
+        Read and return the image with the specified ID or None, if no such image record found.
+        Handles dispatching to fetch methods for different storage devices (e.g., local disk, iRods).
         """
         ipath = self.pgsql.image_path_from_id(uid)
-        return self.return_image_at_path(ipath, mimetype=mimetype) if ipath else None
+        return self.fetch_image_by_path(ipath, mimetype=mimetype)
 
 
     def fetch_image_by_filter (self, filt, collection=None, mimetype=FITS_MIME_TYPE):
@@ -57,8 +60,7 @@ class ImageManager ():
         filtered = self.pgsql.image_metadata_by_query(collection=collection, filt=filt)
         if (filtered):
             ipath = filtered[0].get('file_path')
-            if (ipath):
-                return self.return_image_at_path(ipath, mimetype=mimetype)
+            return self.fetch_image_by_path(ipath, mimetype=mimetype)
         return None
 
 
@@ -67,10 +69,19 @@ class ImageManager ():
         Directly read and return the image at the specified image path. Handles
         dispatching to fetch methods for different storage devices (e.g., local disk, iRods)
         """
-        if (ipath):                         # sanity check
-            return self.return_image_at_path(ipath.strip(), mimetype=mimetype)
-        else:
-            return None
+        return self.return_image_at_path(ipath, mimetype=mimetype) if ipath else None
+
+
+    def get_cutout (self, ipath, co_args, collection=None):
+        """
+        Return an image cutout, specified by the given cutout arguments.
+        """
+        co_filename = self.make_cutout_filename(ipath, co_args, collection=collection)
+        print(f"CO_FILENAME={co_filename}", file=sys.stderr) # REMOVE LATER
+        # if (not self.is_cutout_cached(co_filename)):    # TODO: IMPLEMENT LATER
+        co_filename = self.make_cutout_and_save(ipath, co_args, collection=collection)
+
+        return self.return_cutout_with_name(co_filename)  # return the image cutout
 
 
     def image_metadata (self, uid, select=None):
@@ -80,31 +91,30 @@ class ImageManager ():
         :return a singleton list of metadata dictionary for the image with the specified ID or
                 an empty list if no metadata record found for the specified ID.
         """
-        return self.image_metadata(uid, select=select)
+        return self.pgsql.image_metadata(uid, select=select)
 
 
     def image_metadata_by_collection (self, collection):
         """
-        Return a list of image metadata dictionaries for all images in the specified collection.
+        Return a (possibly empty) list of image metadata dictionaries for all images in
+        the specified collection.
         """
         return self.pgsql.image_metadata_by_query(collection=collection)
 
 
     def image_metadata_by_path (self, ipath, collection=None):
         """
-        Find and return the metadata for the image at the specified image path,
-        in the optionally specified collection. If no collection is given, then the
-        most recently added image with the specified path is used.
+        Return a (possibly empty) list of image metadata dictionaries for all images with
+        the specified image path (which will have different collections).
+        If a collection name is specified, the listing is restricted to the named collection.
         """
-        if (ipath):                         # sanity check
-            return self.pgsql.image_metadata_by_path(ipath.strip(), collection=collection)
-        else:
-            return None
+        return self.pgsql.image_metadata_by_path(ipath, collection=collection)
 
 
     def image_metadata_by_filter (self, filt, collection=None):
         """
-        Return a list of image metadata dictionaries for all images with the specified filter.
+        Return a (possibly empty) list of image metadata dictionaries for all images with
+        the specified filter.
         If a collection name is specified, the listing is restricted to the named collection.
         """
         return self.pgsql.image_metadata_by_query(filt=filt, collection=collection)
@@ -120,6 +130,11 @@ class ImageManager ():
         colls = self.pgsql.list_collections()
         colls.sort()
         return colls
+
+
+    def list_cutouts (self):
+        """ Return a list of image cutout filenames in the cutouts cache directory. """
+        return [ fyl for fyl in os.listdir(CUTOUTS_DIR) if os.path.isfile(os.path.join(CUTOUTS_DIR, fyl)) ]
 
 
     def list_filters (self, collection=None):
@@ -140,23 +155,69 @@ class ImageManager ():
         return paths
 
 
+    def make_cutout (self, hdu, co_args):
+        """
+        Make and return an image cutout for the image HDU, using the given cutout parameters.
+        """
+        wcs = WCS(hdu.header)
+
+        # make the cutout and update its WCS info
+        try:
+            cutout = Cutout2D(hdu.data, position=co_args['center'], size=co_args['co_size'],
+                              wcs=wcs, mode=CUTOUTS_MODE)
+        except (NoOverlapError, PartialOverlapError):
+            sky = co_args['center']
+            errMsg = f"There is no overlap between the reference image and the given center coordinate: {sky.ra.value}, {sky.dec.value} {sky.ra.unit.name} ({sky.frame.name})"
+            current_app.logger.error(errMsg)
+            raise exceptions.RequestException(errMsg)
+
+        # save cutout image in the FITS HDU and update FITS header with cutout WCS
+        hdu.data = cutout.data
+        hdu.header.update(cutout.wcs.to_header())
+
+        return cutout
+
+
+    def make_cutout_and_save (self, ipath, co_args, collection=None):
+        """
+        Cut out a section of the image at the given image path, using the specifications
+        in the give cutout arguments, name the cutout, save it to a file in the cutout
+        cache directory, then return the cached cutout filename.
+        """
+        hdu = fits.open(ipath)[0]
+        cutout = self.make_cutout(hdu, co_args)
+
+        # write the cutout to a new FITS file and then return its filename
+        co_filename = self.make_cutout_filename(ipath, co_args, collection=collection)
+        self.write_cutout(hdu, co_filename)
+
+        return co_filename                  # return the cached cutout filename
+
+
+    def make_cutout_filename (self, ipath, co_args, collection=None):
+        """ Return a filename for the Astropy cutout from info in the given parameters. """
+        basename = os.path.splitext(os.path.basename(ipath))[0]
+        ra = co_args.get('ra')
+        dec = co_args.get('dec')
+        size = co_args.get('size')
+        units = co_args.get('units').to_string()
+        # shape = cutout.shape
+        coll = self.pgsql.clean_id(collection) if (collection is not None) else ''
+        # return f"{coll}_{basename}__{ra}_{dec}_{shape[0]}x{shape[1]}.fits"
+        return f"{coll}_{basename}__{ra}_{dec}_{size}_{units}.fits"
+
+
     def query_cone (self, co_args, collection=None, filt=None, select=DEFAULT_SELECT_FIELDS):
         """
         Return a list of image metadata for images which contain a given point
         within a given radius. If an image collection is specified, restrict the search
         to the specified collection.
+        :return a possibly empty list of image metadata dictionaries
         """
         ra = co_args.get('ra')
         dec = co_args.get('dec')
-        radius = co_args.get('size')        # radius of cone in degrees required
-
-        if (ra and dec and radius):
-            return self.pgsql.query_cone(ra, dec, radius, collection=collection, filt=filt, select=select)
-
-        else:
-            errMsg = "'ra', 'dec', and a radius size (one of 'radius', 'sizeDeg', 'sizeArcMin', or 'sizeArcSec') must be specified."
-            current_app.logger.error(errMsg)
-            raise exceptions.RequestException(errMsg)
+        radius = co_args.get('size')
+        return self.pgsql.query_cone(ra, dec, radius, collection=collection, filt=filt, select=select)
 
 
     def query_image (self, collection=None, filt=None, select=DEFAULT_SELECT_FIELDS):
@@ -169,6 +230,17 @@ class ImageManager ():
         :param select: a optional list of fields to be returned in the query (default ALL fields).
         """
         return self.pgsql.query_image(collection=collection, filt=filt, select=select)
+
+
+    def return_cutout_with_name (self, co_filename, mimetype=FITS_MIME_TYPE):
+        """ Return the named cutout file, giving it the specified MIME type. """
+        co_filepath = os.path.join(CUTOUTS_DIR, co_filename)
+        if (fits_file_exists(co_filepath)):
+            return send_from_directory(CUTOUTS_DIR, co_filename, mimetype=mimetype,
+                                       as_attachment=True, attachment_filename=co_filename)
+        errMsg = f"Image cutout file '{co_filename}' not found in cutouts cache directory"
+        current_app.logger.error(errMsg)
+        raise exceptions.ServerException(errMsg)
 
 
     def return_image_at_filepath (self, filepath, mimetype=FITS_MIME_TYPE):
@@ -194,3 +266,9 @@ class ImageManager ():
 
         else:
             return self.return_image_at_filepath(ipath, mimetype=mimetype)
+
+
+    def write_cutout (self, hdu, co_filename, overwrite=True):
+        """ Write the contents of the given HDU to the named file in the cutouts directory. """
+        co_filepath = os.path.join(CUTOUTS_DIR, co_filename)
+        hdu.writeto(co_filepath, overwrite=True)
