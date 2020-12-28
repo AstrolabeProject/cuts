@@ -2,7 +2,7 @@
 # Top-level Flask routing module: answers requests or spawns Celery task to do it.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Redo fetch and metadata methods.
+#   Last Modified: Trivial method reorder.
 #
 from flask import Blueprint, jsonify, request
 # from flask_cors import CORS
@@ -127,14 +127,6 @@ def co_list ():
     return list_cutouts(request.args)
 
 
-@img.route('/co/fetch_by_path')
-def co_fetch_by_path ():
-    """ Fetch a specific cutout by image path/collection. """
-    # required to avoid circular imports
-    from cuts.blueprints.img.tasks import fetch_cutout_by_path
-    return fetch_cutout_by_path(request.args)
-
-
 @img.route('/co/cutout')
 def co_cutout ():
     """ Make and return an image cutout. """
@@ -149,6 +141,14 @@ def co_cutout_by_filter ():
     # required to avoid circular imports
     from cuts.blueprints.img.tasks import cutout_by_filter
     return cutout_by_filter(request.args)
+
+
+@img.route('/co/fetch_by_path')
+def co_fetch_by_filename ():
+    """ Fetch a specific cutout by cache filename. """
+    # required to avoid circular imports
+    from cuts.blueprints.img.tasks import fetch_cutout_by_filename
+    return fetch_cutout_by_filename(request.args)
 
 
 @img.route('/echo')

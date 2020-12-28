@@ -1,7 +1,7 @@
 #
 # Class to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Redo image metadata methods. Add image_path_from_id.
+#   Last Modified: Trivial var renames.
 #
 import sys
 
@@ -137,12 +137,12 @@ class PostgreSQLManager (ISQLBase):
 
         imgq += " ORDER BY id;"
 
-        rows = self.fetch_rows_2dicts(imgq, qargs)
+        metadata = self.fetch_rows_2dicts(imgq, qargs)
 
         if (self._DEBUG):
-            print("(image_metadata_by_query): => '{}'".format(rows), file=sys.stderr)
+            print("(image_metadata_by_query): => '{}'".format(metadata), file=sys.stderr)
 
-        return rows
+        return metadata
 
 
     def list_catalog_tables (self, db_schema=None):
@@ -318,12 +318,12 @@ class PostgreSQLManager (ISQLBase):
             imgq += " ORDER BY id;"
             qargs.extend([center_ra, center_dec, radius])
 
-        rows = self.fetch_rows_2dicts(imgq, qargs)
+        metadata = self.fetch_rows_2dicts(imgq, qargs)
 
         if (self._DEBUG):
-            print("(query_cone): => '{}'".format(rows), file=sys.stderr)
+            print("(query_cone): => '{}'".format(metadata), file=sys.stderr)
 
-        return rows
+        return metadata
 
 
     def sql4_selected_fields (self, select=None):
