@@ -1,6 +1,9 @@
-# from werkzeug.exceptions import HTTPException
-
-#class RequestException (HTTPException):
+#
+# Implement exceptions used throughout the app.
+#
+#   Written by: Tom Hicks. 11/2/2019.
+#   Last Modified: Add __str__ method, critical for tests.
+#
 class RequestException (Exception):
     status_code = 400
 
@@ -10,17 +13,22 @@ class RequestException (Exception):
         if status_code is not None:
             self.status_code = status_code
 
+
+    def __str__(self):
+        return("({}) {}".format(self.status_code, self.message))
+
+
     def to_dict(self):
         retdict = dict()
         retdict['status_code'] = self.status_code
         retdict['message'] = self.message
         return retdict
 
+
     def to_tuple(self):
         return (self.message, self.status_code)
 
 
-#class ImageNotFound (HTTPException):
 class ImageNotFound (Exception):
     status_code = 404
 
@@ -30,6 +38,10 @@ class ImageNotFound (Exception):
         if status_code is not None:
             self.status_code = status_code
 
+    def __str__(self):
+        return("({}) {}".format(self.status_code, self.message))
+
+
     def to_dict(self):
         retdict = dict()
         retdict['status_code'] = self.status_code
@@ -40,7 +52,6 @@ class ImageNotFound (Exception):
         return (self.message, self.status_code)
 
 
-#class ServerException (HTTPException):
 class ServerException (Exception):
     status_code = 500
 
@@ -49,6 +60,10 @@ class ServerException (Exception):
         self.message = message
         if status_code is not None:
             self.status_code = status_code
+
+    def __str__(self):
+        return("({}) {}".format(self.status_code, self.message))
+
 
     def to_dict(self):
         retdict = dict()
