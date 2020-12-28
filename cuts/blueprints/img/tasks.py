@@ -2,25 +2,19 @@
 # Module to containing spawnable Celery tasks for the application.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Redo fetch and metadata methods. Add/use parse_id_arg method.
+#   Last Modified: Refactor: move cutout work to image manager, better handling of
+#                  argument errors and child failures. WIP: cutout matching logic.
 #
 import os
 
-from flask import current_app, jsonify, request, send_from_directory
+from flask import current_app, jsonify
 
 from astropy import units as u
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
-from astropy.nddata import Cutout2D
-from astropy.nddata.utils import NoOverlapError, PartialOverlapError
-from astropy.wcs import WCS
 
-from config.settings import CUTOUTS_DIR, CUTOUTS_MODE, FITS_MIME_TYPE
-
-import cuts.blueprints.img.file_utils as file_utils
 from cuts.app import create_celery_app
 from cuts.blueprints.img import exceptions
-from cuts.blueprints.img.fits_utils import fits_file_exists
 from cuts.blueprints.img.image_manager import ImageManager
 
 
@@ -38,8 +32,14 @@ imgr = ImageManager()
 @celery.task()
 def fetch_image (args):
     """ Fetch a specific image by ID. """
-    uid = parse_id_arg(args)                # get required ID or error
-    return imgr.fetch_image(uid)
+    uid = parse_id_arg(args)                      # get required ID or error
+    istream = imgr.fetch_image(uid)
+    if (istream is not None):
+        return istream
+    else:
+        errMsg = f"Image with image ID '{uid}' not found in database"
+        current_app.logger.error(errMsg)
+        raise exceptions.ImageNotFound(errMsg)
 
 
 @celery.task()
@@ -47,14 +47,27 @@ def fetch_image_by_filter (args):
     """ Fetch a specific image by filter/collection. """
     filt = parse_filter_arg(args, required=True)  # get required filter or error
     collection = parse_collection_arg(args)
-    return imgr.fetch_image_by_filter(filt, collection=collection)
+    istream = imgr.fetch_image_by_filter(filt, collection=collection)
+    if (istream is not None):
+        return istream
+    else:
+        coll = f" and collection '{collection}' " if (collection) else ''
+        errMsg = f"Image with filter '{filt}' {coll} not found in database"
+        current_app.logger.error(errMsg)
+        raise exceptions.ImageNotFound(errMsg)
 
 
 @celery.task()
 def fetch_image_by_path (args):
     """ Fetch a specific image by image path. """
     ipath = parse_ipath_arg(args, required=True)  # get required image path or error
-    return imgr.fetch_image_by_path(ipath)
+    istream = imgr.fetch_image_by_path(ipath)
+    if (istream is not None):
+        return istream
+    else:
+        errMsg = f"Image with image path '{ipath}' not found in database"
+        current_app.logger.error(errMsg)
+        raise exceptions.ImageNotFound(errMsg)
 
 
 #############################################################
@@ -63,7 +76,13 @@ def fetch_image_by_path (args):
 def image_metadata (args):
     """ Return image metadata for a specific image by ID. """
     uid = parse_id_arg(args)                      # get required ID or error
-    return jsonify(imgr.image_metadata(uid))
+    md = imgr.image_metadata(uid)
+    if (md is not None):
+        return jsonify(imgr.image_metadata(uid))
+    else:
+        errMsg = f"Image metadata for image ID '{uid}' not found in database"
+        current_app.logger.error(errMsg)
+        raise exceptions.ImageNotFound(errMsg)
 
 
 @celery.task()
@@ -85,7 +104,8 @@ def image_metadata_by_filter (args):
 def image_metadata_by_path (args):
     """ Return image metadata for a specific image by image path. """
     ipath = parse_ipath_arg(args, required=True)  # get required image path or error
-    return jsonify(imgr.image_metadata_by_path(ipath))
+    collection = parse_collection_arg(args)       # optional collection restriction
+    return jsonify(imgr.image_metadata_by_path(ipath, collection=collection))
 
 
 #############################################################
@@ -112,11 +132,12 @@ def list_image_paths (args):
 
 @celery.task()
 def query_cone (args):
-    """ List images which contain the given point within a given radius. """
-    # parse the parameters for the location, radius, and collection
-    co_args = parse_cutout_args(args)
-    collection = parse_collection_arg(args)       # optional collection restriction
-    filt = parse_filter_arg(args)                 # optional filter restriction
+    """
+    Return some metadata for images which contain the given point within a given radius.
+    """
+    co_args = parse_cutout_args(args, required=True)  # get coordinates and radius
+    collection = parse_collection_arg(args)           # optional collection restriction
+    filt = parse_filter_arg(args)                     # optional filter restriction
     return jsonify(imgr.query_cone(co_args, collection=collection, filt=filt))
 
 
@@ -136,48 +157,31 @@ def query_image (args):
 @celery.task()
 def list_cutouts (args):
     """ List all existing cutouts in the cutouts (cache) directory. """
-    cutout_paths = [ fyl for fyl in file_utils.gen_file_paths(CUTOUTS_DIR) ]
-    return jsonify(cutout_paths)
-
-
-@celery.task()
-def fetch_cutout_by_path (args):
-    """ Fetch a specific image cutout by filepath. """
-    filepath = args.get('path')
-    if (not filepath):
-        errMsg = "An image cutout file path must be specified, via the 'path' argument"
-        current_app.logger.error(errMsg)
-        raise exceptions.RequestException(errMsg)
-    return return_cutout(filepath)
+    return jsonify(imgr.list_cutouts())
 
 
 @celery.task()
 def get_cutout (args):
-    """ Make and return an image cutout. """
-
+    """
+    Return an image cutout. if cutout size is not specified, return the entire image.
+    """
     # parse the parameters for the cutout
-    co_args = parse_cutout_args(args)
+    co_args = parse_cutout_args(args)    
     collection = parse_collection_arg(args)
 
     # figure out which image to make a cutout from based on the cutout parameters
-    image_filepath = imgr.match_image(co_args, collection=collection)
-    if (not image_filepath):
-        errMsg = "No matching image was not found in images directory"
+    image_matches = imgr.query_cone(co_args, collection=collection)   
+    if (not image_matches):
+        errMsg = "No matching image was not found."
         current_app.logger.error(errMsg)
         raise exceptions.RequestException(errMsg)
+    else:
+        image_path = image_matches[0].get('file_path')
 
     if (not co_args.get('co_size')):        # if no size specified, return the entire image
-        return imgr.return_image_at_filepath(image_filepath) # exit and return entire image
-
-    # actually make the cutout
-    hdu = fits.open(image_filepath)[0]
-    cutout = make_cutout(hdu, co_args)
-
-    # write the cutout to a new FITS file and then return it
-    co_filename = make_cutout_filename(image_filepath, cutout, co_args, collection=collection)
-    write_cutout(hdu, co_filename)
-
-    return return_cutout(co_filename)       # return the image cutout
+        return imgr.return_image_at_path(image_path)  # exit and return entire image
+    else:                                   # else make, cache, and return cutout
+        return imgr.get_cutout(image_path, co_args, collection=collection)
 
 
 @celery.task()
@@ -191,63 +195,35 @@ def cutout_by_filter (args):
     filt = parse_filter_arg(args, required=True)  # test for required filter
 
     # figure out which image to make a cutout from based on the cutout parameters
-    image_matches = imgr.query_cone(co_args, collection=collection, filt=filt)
+    image_matches = imgr.query_cone(co_args, collection=collection, filt=filt)   
     if (not image_matches):
-        errMsg = f"An image was not found for filter {filt} in images directory"
+        errMsg = f"No matching image was not found for filter '{filt}'."
         current_app.logger.error(errMsg)
         raise exceptions.RequestException(errMsg)
     else:
-        image_filepath = image_matches[0].get('file_path')
+        image_path = image_matches[0].get('file_path')
 
     if (not co_args.get('co_size')):        # if no size specified, return the entire image
-        return imgr.return_image_at_filepath(image_filepath) # exit and return entire image
+        return imgr.return_image_at_path(image_path)  # exit and return entire image
+    else:                                   # else make, cache, and return cutout
+        return imgr.get_cutout(image_path, co_args, collection=collection)
 
-    # actually make the cutout
-    hdu = fits.open(image_filepath)[0]
-    cutout = make_cutout(hdu, co_args)
 
-    # write the cutout to a new FITS file and then return it
-    co_filename = make_cutout_filename(image_filepath, cutout, co_args, collection=collection)
-    write_cutout(hdu, co_filename)
-
-    return return_cutout(co_filename)       # return the cutout image
+@celery.task()
+def fetch_cutout_by_filename (args):
+    """ Fetch a specific image cutout by filename. """
+    filename = args.get('filename')
+    if (not filename):
+        errMsg = "An image cutout filename must be specified, via the 'filename' argument"
+        current_app.logger.error(errMsg)
+        raise exceptions.RequestException(errMsg)
+    return imgr.return_cutout_with_name(filename)
 
 
 
 #
 # Internal helper methods
 #
-
-def make_cutout (hdu, co_args):
-    """ Make and return an image cutout for the given image, based on the given cutout parameters. """
-    wcs = WCS(hdu.header)
-
-    # make the cutout and update its WCS info
-    try:
-        cutout = Cutout2D(hdu.data, position=co_args['center'], size=co_args['co_size'],
-                          wcs=wcs, mode=CUTOUTS_MODE)
-    except (NoOverlapError, PartialOverlapError):
-        sky = co_args['center']
-        errMsg = f"There is no overlap between the reference image and the given center coordinate: {sky.ra.value}, {sky.dec.value} {sky.ra.unit.name} ({sky.frame.name})"
-        current_app.logger.error(errMsg)
-        raise exceptions.RequestException(errMsg)
-
-    # save cutout image in the FITS HDU and update FITS header with cutout WCS
-    hdu.data = cutout.data
-    hdu.header.update(cutout.wcs.to_header())
-
-    return cutout
-
-
-def make_cutout_filename (image_filepath, cutout, co_args, collection=None):
-    """ Return a filename for the Astropy cutout from info in the given parameters. """
-    basename = os.path.splitext(os.path.basename(image_filepath))[0]
-    ra = co_args['ra']
-    dec = co_args['dec']
-    shape = cutout.shape
-    coll = collection if (collection is not None) else '_'
-    return f"{coll}_{basename}__{ra}_{dec}_{shape[0]}x{shape[1]}.fits"
-
 
 def parse_collection_arg (args, required=False):
     """
@@ -295,17 +271,17 @@ def parse_coordinate_args (args):
     return co_args                          # return parsed, converted cutout arguments
 
 
-def parse_cutout_args (args):
+def parse_cutout_args (args, required=False):
     """ Parse, convert, and check the given arguments, returning a dictionary
-        of cutout arguments. Any arguments needed by cutout routines should be passed
+        of cutout arguments. Any arguments needed by cutout routines will be passed
         through to the return dictionary.
     """
-    co_args = parse_cutout_size(args)            # begin by getting cutout size parameters
+    co_args = parse_cutout_size(args, required=required)  # first, get cutout size parameters
     co_args.update(parse_coordinate_args(args))  # add coordinate parameters
     return co_args                               # return parsed, converted cutout arguments
 
 
-def parse_cutout_size (args):
+def parse_cutout_size (args, required=False):
     """ Parse, convert, and check the given cutout size arguments, return a dictionary of
         the size arguments. No returned cutout size signals that the whole image is desired. """
     co_args = {}                            # dictionary to hold parsed fields
@@ -324,47 +300,17 @@ def parse_cutout_size (args):
     elif (sizeArcSecStr):                   # or in arc seconds
         co_args['units'] = u.arcsec
         co_args['size'] = float(sizeArcSecStr)
-    else:                                   # else no size specified
-        co_args.pop('units', None)
-        co_args['size'] = float(0)
 
-    # make a scalar Quantity from the size and units, if possible
-    if (co_args['size'] > 0):
-        co_args['co_size'] = u.Quantity(co_args['size'], co_args['units'])
-    else:
-        co_args.pop('co_size', None)        # remove to signal that no sizes were given
+    if (co_args.get('size') is None):       # if no size given
+        if (required):                      # if size argument required
+            errMsg = "A radius size (one of 'radius', 'sizeDeg', 'sizeArcMin', or 'sizeArcSec') must be specified."
+            current_app.logger.error(errMsg)
+            raise exceptions.RequestException(errMsg)
+        return co_args                      # not required: return empty dictionary
 
+    # got a size: make a scalar Quantity from the size and units, if possible
+    co_args['co_size'] = u.Quantity(co_args['size'], co_args['units'])
     return co_args                          # return parsed, converted cutout arguments
-
-
-def parse_ipath_arg (args, required=False):
-    """
-    Parse out the file path argument, returning the file path string or None.
-    :raises: RequestException if no path given and the required flag is True.
-    """
-    filepath = args.get('path')
-    if (filepath is not None):
-        filepath = filepath.strip()
-        if ((not filepath) and required):
-            errMsg = "An image file path must be specified, via the 'path' argument"
-            current_app.logger.error(errMsg)
-            raise exceptions.RequestException(errMsg)
-    return filepath
-
-
-def parse_filter_arg (args, required=False):
-    """
-    Parse out the filter argument, returning the filter name string or None.
-    :raises: RequestException if no filter given and the required flag is True.
-    """
-    filt = args.get('filter')
-    if (filt is not None):
-        filt = filt.strip()
-        if ((not filt) and required):
-            errMsg = "An image filter must be specified, via the 'filter' argument"
-            current_app.logger.error(errMsg)
-            raise exceptions.RequestException(errMsg)
-    return filt
 
 
 def parse_id_arg (args, required=True):
@@ -391,18 +337,31 @@ def parse_id_arg (args, required=True):
         raise exceptions.RequestException(errMsg)
 
 
-def return_cutout (co_filename, mimetype=FITS_MIME_TYPE):
-    """ Return the named cutout file, giving it the specified MIME type. """
-    co_filepath = os.path.join(CUTOUTS_DIR, co_filename)
-    if (fits_file_exists(co_filepath)):
-        return send_from_directory(CUTOUTS_DIR, co_filename, mimetype=mimetype,
-                                   as_attachment=True, attachment_filename=co_filename)
-    errMsg = f"Specified image cutout file '{co_filename}' not found in cutouts directory"
-    current_app.logger.error(errMsg)
-    raise exceptions.ImageNotFound(errMsg)
+def parse_ipath_arg (args, required=False):
+    """
+    Parse out the file path argument, returning the file path string or None.
+    :raises: RequestException if no path given and the required flag is True.
+    """
+    filepath = args.get('path')
+    if (filepath is not None):
+        filepath = filepath.strip()
+        if ((not filepath) and required):
+            errMsg = "A valid image path must be specified, via the 'path' argument"
+            current_app.logger.error(errMsg)
+            raise exceptions.RequestException(errMsg)
+    return filepath
 
 
-def write_cutout (hdu, co_filename, overwrite=True):
-    """ Write the contents of the given HDU to the named file in the cutouts directory. """
-    co_filepath = os.path.join(CUTOUTS_DIR, co_filename)
-    hdu.writeto(co_filepath, overwrite=True)
+def parse_filter_arg (args, required=False):
+    """
+    Parse out the filter argument, returning the filter name string or None.
+    :raises: RequestException if no filter given and the required flag is True.
+    """
+    filt = args.get('filter')
+    if (filt is not None):
+        filt = filt.strip()
+        if ((not filt) and required):
+            errMsg = "An image filter must be specified, via the 'filter' argument"
+            current_app.logger.error(errMsg)
+            raise exceptions.RequestException(errMsg)
+    return filt
