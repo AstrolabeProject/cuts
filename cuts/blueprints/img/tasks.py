@@ -1,13 +1,12 @@
 #
-# Module to containing spawnable Celery tasks for the application.
+# Module containing spawnable Celery tasks for the application.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Refactor: move cutout work to image manager, better handling of
-#                  argument errors and child failures. WIP: cutout matching logic.
+#   Last Modified: Redo parse_filter_arg.
 #
 import os
 
-from flask import current_app, jsonify
+from flask import current_app, jsonify, request
 
 from astropy import units as u
 from astropy.io import fits
@@ -321,7 +320,6 @@ def parse_id_arg (args, required=True):
     """
     uid = args.get('id')
     if (uid is not None):
-        uid = uid.strip()
         try:
             num = int(uid)
             if (num > 0):
@@ -358,10 +356,11 @@ def parse_filter_arg (args, required=False):
     :raises: RequestException if no filter given and the required flag is True.
     """
     filt = args.get('filter')
-    if (filt is not None):
-        filt = filt.strip()
-        if ((not filt) and required):
+    if ((filt is None) or (not filt.strip())):    # if no filter or empty filter
+        if (required):
             errMsg = "An image filter must be specified, via the 'filter' argument"
             current_app.logger.error(errMsg)
             raise exceptions.RequestException(errMsg)
-    return filt
+        else:
+            return None
+    return filt.strip()
