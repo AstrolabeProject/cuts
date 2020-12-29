@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Refactor: move cutout work here, cleanups.
+#   Last Modified: Check for no ipath in fetch_image.
 #
 import os
 import sys
@@ -48,7 +48,7 @@ class ImageManager ():
         Handles dispatching to fetch methods for different storage devices (e.g., local disk, iRods).
         """
         ipath = self.pgsql.image_path_from_id(uid)
-        return self.fetch_image_by_path(ipath, mimetype=mimetype)
+        return self.fetch_image_by_path(ipath, mimetype=mimetype) if ipath else None
 
 
     def fetch_image_by_filter (self, filt, collection=None, mimetype=FITS_MIME_TYPE):
