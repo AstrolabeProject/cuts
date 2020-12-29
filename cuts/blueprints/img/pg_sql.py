@@ -1,7 +1,7 @@
 #
 # Class to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Trivial var renames.
+#   Last Modified: Another trivial var rename.
 #
 import sys
 
@@ -46,8 +46,8 @@ class PostgreSQLManager (ISQLBase):
         image_table = self.clean_table_name()
 
         imgq = "SELECT id, file_path FROM {} WHERE id = (%s)".format(image_table)
-        row = self.fetch_row(imgq, [uid])
-        ipath = row[0] if row else None         # assume: ID field is always the first field
+        fields = self.fetch_row(imgq, [uid])
+        ipath = fields[1] if fields else None
 
         if (self._DEBUG):
             print("(image_path_from_id): => '{}'".format(ipath), file=sys.stderr)
