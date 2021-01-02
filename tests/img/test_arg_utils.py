@@ -2,7 +2,7 @@ import os
 import pytest
 
 import cuts.blueprints.img.arg_utils as autils
-from cuts.blueprints.img.exceptions import ImageNotFound, RequestException, ServerException
+from cuts.blueprints.img.exceptions import ImageNotFound, RequestException, ServerError
 
 
 class TestArgUtils(object):

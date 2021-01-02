@@ -13,7 +13,7 @@ class TestExceptions(object):
         reqex = xcpt.RequestException(self.BAD_REQUEST)
         print(reqex)
         print(type(reqex))
-        assert reqex.status_code == 400
+        assert reqex.error_code == 400
         rdict = reqex.to_dict()
         assert 'message' in rdict
         assert rdict.get('message') == self.BAD_REQUEST
@@ -24,7 +24,7 @@ class TestExceptions(object):
 
     def test_request_exception_withcode(self):
         reqex= xcpt.RequestException(self.BAD_REQUEST, 555)
-        assert reqex.status_code == 555
+        assert reqex.error_code == 555
         rdict = reqex.to_dict()
         assert 'message' in rdict
         assert rdict.get('message') == self.BAD_REQUEST
@@ -37,7 +37,7 @@ class TestExceptions(object):
         reqex = xcpt.ImageNotFound(self.BAD_FILE)
         print(reqex)
         print(type(reqex))
-        assert reqex.status_code == 404
+        assert reqex.error_code == 404
         rdict = reqex.to_dict()
         assert 'message' in rdict
         assert rdict.get('message') == self.BAD_FILE
@@ -48,7 +48,7 @@ class TestExceptions(object):
 
     def test_image_not_found_withcode(self):
         reqex= xcpt.ImageNotFound(self.BAD_FILE, 99)
-        assert reqex.status_code == 99
+        assert reqex.error_code == 99
         rdict = reqex.to_dict()
         assert 'message' in rdict
         assert rdict.get('message') == self.BAD_FILE
@@ -58,10 +58,10 @@ class TestExceptions(object):
 
 
     def test_server_exception(self):
-        reqex = xcpt.ServerException(self.FAULT)
+        reqex = xcpt.ServerError(self.FAULT)
         print(reqex)
         print(type(reqex))
-        assert reqex.status_code == 500
+        assert reqex.error_code == 500
         rdict = reqex.to_dict()
         assert 'message' in rdict
         assert rdict.get('message') == self.FAULT
@@ -71,8 +71,8 @@ class TestExceptions(object):
 
 
     def test_server_exception_withcode(self):
-        reqex= xcpt.ServerException(self.FAULT, 7)
-        assert reqex.status_code == 7
+        reqex= xcpt.ServerError(self.FAULT, 7)
+        assert reqex.error_code == 7
         rdict = reqex.to_dict()
         assert 'message' in rdict
         assert rdict.get('message') == self.FAULT

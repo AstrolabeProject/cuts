@@ -2,7 +2,7 @@
 # Module containing spawnable Celery tasks for the application.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Refactor argument handling/parsing into separate module.
+#   Last Modified: Update for exception refactoring.
 #
 import os
 
@@ -170,7 +170,7 @@ def get_cutout (args):
     if (not image_matches):
         errMsg = "No matching image was not found."
         current_app.logger.error(errMsg)
-        raise exceptions.RequestException(errMsg)
+        raise exceptions.ImageNotFound(errMsg)
     else:
         image_path = image_matches[0].get('file_path')
 
@@ -195,7 +195,7 @@ def cutout_by_filter (args):
     if (not image_matches):
         errMsg = f"No matching image was not found for filter '{filt}'."
         current_app.logger.error(errMsg)
-        raise exceptions.RequestException(errMsg)
+        raise exceptions.ImageNotFound(errMsg)
     else:
         image_path = image_matches[0].get('file_path')
 

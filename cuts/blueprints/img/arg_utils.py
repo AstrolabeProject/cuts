@@ -21,7 +21,7 @@ def parse_collection_arg (args, required=False):
     if ((coll is None) or (not coll.strip())):    # if no collection or empty collection
         if (required):
             errMsg = "A collection name must be specified, via the 'collection' argument"
-            # current_app.logger.error(errMsg)
+            # current_app.logger.error(errMsg)  
             raise exceptions.RequestException(errMsg)
         else:
             return None
@@ -36,7 +36,7 @@ def parse_coordinate_args (args):
     raStr = args.get('ra')
     if (not raStr):
         errMsg = "Right ascension must be specified, via the 'ra' argument"
-        # current_app.logger.error(errMsg)
+        # current_app.logger.error(errMsg)  
         raise exceptions.RequestException(errMsg)
     else:
         ra = float(raStr)
@@ -45,7 +45,7 @@ def parse_coordinate_args (args):
     decStr = args.get('dec')
     if (not decStr):
         errMsg = "Declination must be specified, via the 'dec' argument"
-        # current_app.logger.error(errMsg)
+        # current_app.logger.error(errMsg)  
         raise exceptions.RequestException(errMsg)
     else:
         dec = float(decStr)
@@ -91,7 +91,7 @@ def parse_cutout_size (args, required=False):
     if (co_args.get('size') is None):       # if no size given
         if (required):                      # if size argument required
             errMsg = "A radius size (one of 'radius', 'sizeDeg', 'sizeArcMin', or 'sizeArcSec') must be specified."
-            # current_app.logger.error(errMsg)
+            # current_app.logger.error(errMsg)  
             raise exceptions.RequestException(errMsg)
         return co_args                      # not required: return empty dictionary
 
@@ -109,7 +109,7 @@ def parse_filter_arg (args, required=False):
     if ((filt is None) or (not filt.strip())):    # if no filter or empty filter
         if (required):
             errMsg = "An image filter must be specified, via the 'filter' argument"
-            # current_app.logger.error(errMsg)
+            # current_app.logger.error(errMsg)  
             raise exceptions.RequestException(errMsg)
         else:
             return None
@@ -135,7 +135,7 @@ def parse_id_arg (args, required=True):
         return None
     else:
         errMsg = "A record ID must be specified, via the 'id' argument"
-        # current_app.logger.error(errMsg)
+        # current_app.logger.error(errMsg)  
         raise exceptions.RequestException(errMsg)
 
 
@@ -148,7 +148,7 @@ def parse_ipath_arg (args, required=False):
     if ((ipath is None) or (not ipath.strip())):    # if no path or empty path
         if (required):
             errMsg = "A valid image path must be specified, via the 'path' argument"
-            # current_app.logger.error(errMsg)
+            # current_app.logger.error(errMsg)  
             raise exceptions.RequestException(errMsg)
         else:
             return None

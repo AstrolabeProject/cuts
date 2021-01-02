@@ -1,7 +1,7 @@
 #
 # Base class for common methods to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Add method to fetch a single row.
+#   Last Modified: Update for exception refactoring.
 #
 import configparser
 import sys
@@ -50,19 +50,19 @@ class ISQLBase ():
             config.read_file(open(dbconfig_file))  # try to read the DB config file
         except FileNotFoundError:
             errMsg = "DB configuration file '{}' not found or not readable.".format(dbconfig_file)
-            raise exceptions.ServerException(errMsg)
+            raise exceptions.ServerError(errMsg)
 
         try:
             dbconfig = dict(config['db_properties'])  # try to fetch DB properties
         except KeyError:
             e1 = 'DB storage specified but no database parameters (db_properties) found'
             errMsg = "{} in DB configuration file '{}'.".format(e1, dbconfig_file)
-            raise exceptions.ServerException(errMsg)
+            raise exceptions.ServerError(errMsg)
 
         if (dbconfig.get('db_uri') is None):
             e1 = 'DB storage specified but no database URI (db_uri) parameter found'
             errMsg = "{} in DB configuration file '{}'.".format(e1, dbconfig_file)
-            raise exceptions.ServerException(errMsg)
+            raise exceptions.ServerError(errMsg)
 
         return dbconfig
 
@@ -77,7 +77,7 @@ class ISQLBase ():
             return keep_characters(identifier, allowed)
         else:
             errMsg = "Identifier to be cleaned cannot be empty or None."
-            raise exceptions.ServerException(errMsg)
+            raise exceptions.ServerError(errMsg)
 
 
     def execute_sql (self, sql_query_string, sql_values):

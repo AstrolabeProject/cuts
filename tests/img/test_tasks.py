@@ -2,7 +2,7 @@ import os
 import pytest
 
 import cuts.blueprints.img.tasks as tasks
-from cuts.blueprints.img.exceptions import ImageNotFound, RequestException, ServerException
+from cuts.blueprints.img.exceptions import ImageNotFound, RequestException, ServerError
 
 
 class TestTasks(object):

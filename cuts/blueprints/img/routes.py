@@ -2,7 +2,7 @@
 # Top-level Flask routing module: answers requests or spawns Celery task to do it.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Trivial method reorder.
+#   Last Modified: Update for exception refactoring.
 #
 from flask import Blueprint, jsonify, request
 # from flask_cors import CORS
@@ -161,14 +161,22 @@ def echo ():
 # Image blueprint error handlers
 #
 
-@img.errorhandler(exceptions.RequestException)
-def handle_request_exception(exception):
+@img.errorhandler(exceptions.ProcessingError)
+def handle_processing_error(exception):
     return exception.to_tuple()
 
 @img.errorhandler(exceptions.ImageNotFound)
 def handle_image_not_found(exception):
     return exception.to_tuple()
 
-@img.errorhandler(exceptions.ServerException)
-def handle_server_exception(exception):
+@img.errorhandler(exceptions.RequestException)
+def handle_request_exception(exception):
+    return exception.to_tuple()
+
+@img.errorhandler(exceptions.ServerError)
+def handle_server_error(exception):
+    return exception.to_tuple()
+
+@img.errorhandler(exceptions.UnsupportedType)
+def handle_unsupported_type(exception):
     return exception.to_tuple()

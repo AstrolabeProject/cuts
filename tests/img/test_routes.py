@@ -1,7 +1,7 @@
 import os
 import pytest
 
-from cuts.blueprints.img.exceptions import ImageNotFound, RequestException, ServerException
+from cuts.blueprints.img.exceptions import ImageNotFound, RequestException, ServerError
 
 class TestRoutes(object):
 
