@@ -14,13 +14,19 @@ class TestArgUtils(object):
     ra_emsg = "Right ascension must be specified, via the 'ra' argument"
     dec_emsg = "Declination must be specified, via the 'dec' argument"
 
-    def dump_exception (self, xcpt):
-        # xcpt is an instance of pytest.ExceptionInfo
-        print(f"XCPT={xcpt}")
-        print(f"XCPT.type={xcpt.type}")
-        print(f"XCPT.typename={xcpt.typename}")
-        print(f"XCPT.value={str(xcpt.value)}")
-        # print(f"dir(XCPT)={dir(xcpt)}")
+
+    def test_setup_app (self, app):
+        " Create an instance of the app: should be executed only once by conftest.py. "
+        assert app is not None
+
+
+    # def dump_exception (self, xcpt):
+    #     # xcpt is an instance of pytest.ExceptionInfo
+    #     print(f"XCPT={xcpt}")
+    #     print(f"XCPT.type={xcpt.type}")
+    #     print(f"XCPT.typename={xcpt.typename}")
+    #     print(f"XCPT.value={str(xcpt.value)}")
+    #     # print(f"dir(XCPT)={dir(xcpt)}")
 
 
     def test_parse_collection_arg_nocoll(self):
