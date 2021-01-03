@@ -2,7 +2,7 @@
 # Utilities for argument parsing and validataion.
 #
 #   Written by: Tom Hicks. 12/28/2020.
-#   Last Modified: Fix: explicitly import current_app.
+#   Last Modified: Catch conversion errors.
 #
 from flask import current_app
 
@@ -35,22 +35,32 @@ def parse_coordinate_args (args):
     co_args = {}
 
     raStr = args.get('ra')
-    if (not raStr):
+    if (raStr is not None):
+        try:
+            ra = float(raStr)
+            co_args['ra'] = ra
+        except ValueError:                  # on string to number conversion error
+            errMsg = "Error trying to convert the specified RA to a number."
+            current_app.logger.error(errMsg)
+            raise exceptions.RequestException(errMsg)
+    else:
         errMsg = "Right ascension must be specified, via the 'ra' argument"
         current_app.logger.error(errMsg)
         raise exceptions.RequestException(errMsg)
-    else:
-        ra = float(raStr)
-        co_args['ra'] = ra
 
     decStr = args.get('dec')
-    if (not decStr):
+    if (decStr is not None):
+        try:
+            dec = float(decStr)
+            co_args['dec'] = dec
+        except ValueError:                  # on string to number conversion error
+            errMsg = "Error trying to convert the specified DEC to a number."
+            current_app.logger.error(errMsg)
+            raise exceptions.RequestException(errMsg)
+    else:
         errMsg = "Declination must be specified, via the 'dec' argument"
         current_app.logger.error(errMsg)
         raise exceptions.RequestException(errMsg)
-    else:
-        dec = float(decStr)
-        co_args['dec'] = dec
 
     frame = args.get('frame', 'icrs')       # get optional coordinate reference system
 
@@ -79,15 +89,21 @@ def parse_cutout_size (args, required=False):
     sizeDegStr = args.get('sizeDeg', args.get('radius'))  # allow alternate radius keyword
     sizeArcSecStr = args.get('sizeArcSec')
 
-    if (sizeArcMinStr):                     # prefer units in arc minutes
-        co_args['units'] = u.arcmin
-        co_args['size'] = float(sizeArcMinStr)
-    elif (sizeDegStr):                      # alternatively in degrees
-        co_args['units'] = u.deg
-        co_args['size'] = float(sizeDegStr)
-    elif (sizeArcSecStr):                   # or in arc seconds
-        co_args['units'] = u.arcsec
-        co_args['size'] = float(sizeArcSecStr)
+    try:
+        if (sizeArcMinStr):                     # prefer units in arc minutes
+            co_args['size'] = float(sizeArcMinStr)
+            co_args['units'] = u.arcmin
+        elif (sizeDegStr):                      # alternatively in degrees
+            co_args['size'] = float(sizeDegStr)
+            co_args['units'] = u.deg
+        elif (sizeArcSecStr):                   # or in arc seconds
+            co_args['size'] = float(sizeArcSecStr)
+            co_args['units'] = u.arcsec
+
+    except ValueError:                      # on string to number conversion error
+        errMsg = "Error trying to convert the given size specification to a number."
+        current_app.logger.error(errMsg)
+        raise exceptions.RequestException(errMsg)
 
     if (co_args.get('size') is None):       # if no size given
         if (required):                      # if size argument required

@@ -14,7 +14,9 @@ class TestArgUtils(object):
     id_emsg = "A record ID must be specified"
     path_emsg = "A valid image path must be specified"
     ra_emsg = "Right ascension must be specified, via the 'ra' argument"
+    ra_convert_emsg = "Error trying to convert the specified RA to a number."
     dec_emsg = "Declination must be specified, via the 'dec' argument"
+    dec_convert_emsg = "Error trying to convert the specified DEC to a number."
     size_emsg = "A radius size .* must be specified."
     size_convert_emsg = "Error trying to convert the given size specification to a number."
 
@@ -99,10 +101,22 @@ class TestArgUtils(object):
             autils.parse_coordinate_args({})
 
 
+    def test_parse_coord_args_badra(self):
+        """ Bad RA given. """
+        with pytest.raises(RequestException, match=self.ra_convert_emsg) as reqex:
+            autils.parse_coordinate_args({'ra': 'xxx'})
+
+
     def test_parse_coord_args_nodec(self):
         """ No DEC given. """
         with pytest.raises(RequestException, match=self.dec_emsg) as reqex:
             autils.parse_coordinate_args({'ra': '45.0'})
+
+
+    def test_parse_coord_args_baddec(self):
+        """ Bad DEC given. """
+        with pytest.raises(RequestException, match=self.dec_convert_emsg) as reqex:
+            autils.parse_coordinate_args({'ra': '45.0', 'dec': 'xxx'})
 
 
     def test_parse_coord_args(self):
