@@ -86,3 +86,11 @@ class TestRoutes(object):
         assert emsg in resp_msg
 
 
+    def test_fetch_image(self, client):
+        args = { 'id': '250' }
+        emsg="Image with image ID .* not found"
+        with client:
+            istream = client.get("/img/fetch?id=250")
+            print(istream)
+            print(type(istream))
+            assert istream is not None

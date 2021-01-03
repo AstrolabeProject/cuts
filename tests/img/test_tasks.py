@@ -21,17 +21,6 @@ class TestTasks(object):
             tasks.fetch_image(args)
 
 
-    # # FAILS: working outside of context
-    # def test_fetch_image(self):
-    #     args = { 'id': '250' }
-    #     emsg="Image with image ID .* not found"
-    #     istream = tasks.fetch_image(args)
-    #     print(istream)
-    #     print(type(istream))
-    #     assert istream is not None
-
-    #     assert False
-
     def test_fetch_image_by_filter_nofilt_required(self):
         """ No filter given and filter required. """
         emsg="An image filter must be specified"
