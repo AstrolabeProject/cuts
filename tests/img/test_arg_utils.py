@@ -1,6 +1,8 @@
 import os
 import pytest
 
+from astropy import units as u
+
 import cuts.blueprints.img.arg_utils as autils
 from cuts.blueprints.img.exceptions import ImageNotFound, RequestException, ServerError
 
@@ -13,6 +15,9 @@ class TestArgUtils(object):
     path_emsg = "A valid image path must be specified"
     ra_emsg = "Right ascension must be specified, via the 'ra' argument"
     dec_emsg = "Declination must be specified, via the 'dec' argument"
+    size_emsg = "A radius size .* must be specified."
+    size_convert_emsg = "Error trying to convert the given size specification to a number."
+
 
 
     def test_setup_app (self, app):
@@ -107,6 +112,89 @@ class TestArgUtils(object):
         assert 'ra' in co_args
         assert 'dec' in co_args
         assert 'center' in co_args
+
+
+
+    def test_parse_cutout_args(self):
+        """ Calls both parse_cutout_size and parse_coordinate_args. """
+        co_args = autils.parse_cutout_args({ 'ra': '118.005', 'dec': '-2.0', 'radius': '0.001' })
+        assert co_args is not None
+        assert 'ra' in co_args
+        assert 'dec' in co_args
+        assert 'center' in co_args
+        assert 'size' in co_args
+        assert 'co_size' in co_args
+
+
+
+    def test_parse_cutout_size_nosize(self):
+        """ No size in any form given but not required. """
+        co_args = autils.parse_cutout_size({})
+        assert co_args == {}
+
+
+    def test_parse_cutout_size_empty(self):
+        """ Empty size given, when not required, but still erroneous. """
+        with pytest.raises(RequestException, match=self.size_convert_emsg) as reqex:
+            co_args = autils.parse_cutout_size({'sizeArcMin': '  '})
+
+
+    def test_parse_cutout_size_nosize_req(self):
+        """ No size in any form given. """
+        with pytest.raises(RequestException, match=self.size_emsg) as reqex:
+            co_args = autils.parse_cutout_size({}, required=True)
+
+    def test_parse_cutout_size_empty_req(self):
+        """ Empty size given, but not required. """
+        with pytest.raises(RequestException, match=self.size_convert_emsg) as reqex:
+            co_args = autils.parse_cutout_size({'sizeArcMin': '  '}, required=True)
+
+    def test_parse_cutout_size_min(self):
+        """ Size in arc minutes given. """
+        co_args = autils.parse_cutout_size({'sizeArcMin': '3.2'}, required=True)
+        assert co_args is not None
+        assert co_args != {}
+        assert 'size' in co_args
+        assert co_args.get('size') == 3.2
+        assert 'units' in co_args
+        assert co_args.get('units') == u.arcmin
+        assert 'co_size' in co_args
+
+
+    def test_parse_cutout_size_sec(self):
+        """ Size in arc seconds given. """
+        co_args = autils.parse_cutout_size({'sizeArcSec': '1256'}, required=True)
+        assert co_args is not None
+        assert co_args != {}
+        assert 'size' in co_args
+        assert co_args.get('size') == 1256
+        assert 'units' in co_args
+        assert co_args.get('units') == u.arcsec
+        assert 'co_size' in co_args
+
+
+    def test_parse_cutout_size_deg(self):
+        """ Size in degrees given. """
+        co_args = autils.parse_cutout_size({'sizeDeg': '0.005'}, required=True)
+        assert co_args is not None
+        assert co_args != {}
+        assert 'size' in co_args
+        assert co_args.get('size') == 0.005
+        assert 'units' in co_args
+        assert co_args.get('units') == u.deg
+        assert 'co_size' in co_args
+
+
+    def test_parse_cutout_size_radius(self):
+        """ Size in degrees given. """
+        co_args = autils.parse_cutout_size({'radius': '0.002345'}, required=True)
+        assert co_args is not None
+        assert co_args != {}
+        assert 'size' in co_args
+        assert co_args.get('size') == 0.002345
+        assert 'units' in co_args
+        assert co_args.get('units') == u.deg
+        assert 'co_size' in co_args
 
 
 
