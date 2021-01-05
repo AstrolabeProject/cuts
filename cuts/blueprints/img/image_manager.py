@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Update for exception refactoring.
+#   Last Modified: Change exception and message for return_cutout_with_name.
 #
 import os
 import sys
@@ -238,9 +238,9 @@ class ImageManager ():
         if (fits_file_exists(co_filepath)):
             return send_from_directory(CUTOUTS_DIR, co_filename, mimetype=mimetype,
                                        as_attachment=True, attachment_filename=co_filename)
-        errMsg = f"Image cutout file '{co_filename}' not found in cutouts cache directory"
+        errMsg = f"Cached image cutout file '{co_filename}' not found in cutouts cache directory"
         current_app.logger.error(errMsg)
-        raise exceptions.ServerError(errMsg)
+        raise exceptions.ImageNotFound(errMsg)
 
 
     def return_image_at_filepath (self, filepath, mimetype=FITS_MIME_TYPE):
