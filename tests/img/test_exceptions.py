@@ -59,6 +59,30 @@ class TestExceptions(object):
         assert rtup[1] == 99
 
 
+    def test_not_yet_implemented(self):
+        reqex = xcpt.NotYetImplemented(self.BAD_FILE)
+        print(reqex)
+        print(type(reqex))
+        assert reqex.error_code == xcpt.NotYetImplemented.ERROR_CODE
+        rdict = reqex.to_dict()
+        assert 'message' in rdict
+        assert rdict.get('message') == self.BAD_FILE
+        rtup = reqex.to_tuple()
+        assert rtup[0] == self.BAD_FILE
+        assert rtup[1] == xcpt.NotYetImplemented.ERROR_CODE
+
+
+    def test_not_yet_implemented_withcode(self):
+        reqex= xcpt.NotYetImplemented(self.BAD_FILE, 99)
+        assert reqex.error_code == 99
+        rdict = reqex.to_dict()
+        assert 'message' in rdict
+        assert rdict.get('message') == self.BAD_FILE
+        rtup = reqex.to_tuple()
+        assert rtup[0] == self.BAD_FILE
+        assert rtup[1] == 99
+
+
     def test_request_exception(self):
         reqex = xcpt.RequestException(self.BAD_REQUEST)
         print(reqex)

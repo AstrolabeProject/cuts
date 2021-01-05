@@ -2,7 +2,7 @@
 # Implement exceptions used throughout the app.
 #
 #   Written by: Tom Hicks. 11/2/2019.
-#   Last Modified: Combine with Image MetaData ToolKit errors.
+#   Last Modified: Add NotYetImplemented exception.
 #
 class ProcessingError (Exception):
     """
@@ -44,6 +44,16 @@ class ImageNotFound (ProcessingError):
     Class for exceptions due to specification of missing or unreadable image paths.
     """
     ERROR_CODE = 404
+
+    def __init__(self, message, error_code=ERROR_CODE):
+        super().__init__(message, error_code)
+
+
+class NotYetImplemented (ProcessingError):
+    """
+    Class for server exceptions due to functions not yet implemented.
+    """
+    ERROR_CODE = 501
 
     def __init__(self, message, error_code=ERROR_CODE):
         super().__init__(message, error_code)
