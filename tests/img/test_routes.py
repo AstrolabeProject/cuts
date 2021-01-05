@@ -357,6 +357,16 @@ class TestRoutes(object):
 
 
 
+    def test_co_list(self, client):
+        resp = client.get("/co/list")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == 200
+        assert resp.data is not None
+        assert '[]' in str(resp.data)
+
+
+
     def test_co_fetch_from_cache_noname(self, client):
         """ No ID argument. """
         resp = client.get('/co/fetch_from_cache')
@@ -390,3 +400,24 @@ class TestRoutes(object):
         print(resp_msg)
         errmsg = self.co_nf_emsg.format(nosuch)
         assert errmsg in resp_msg
+
+
+
+    def test_echo_empty(self, client):
+        resp = client.get("/echo")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == 200
+        assert resp.data is not None
+        assert '{}' in str(resp.data)
+
+
+    def test_echo_nonempty(self, client):
+        resp = client.get("/echo?arg1=1&arg2=other")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == 200
+        assert resp.data is not None
+        respstr = str(resp.data)
+        assert '"arg1":"1"' in respstr
+        assert '"arg2":"other"' in respstr
