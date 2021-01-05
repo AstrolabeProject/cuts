@@ -10,11 +10,10 @@ class TestRoutes(object):
     filt_emsg = "An image filter must be specified"
     filt_nf_emsg = "Image with filter '{0}' {1} not found in database"
     filt_coll_nf_emsg = "Image with filter '{0}' and collection '{1}' not found in database"
+    coll_emsg = "A collection name must be specified, via the 'collection' argument"
     path_emsg = "A valid image path must be specified, via the 'path' argument"
     path_nf_emsg = "Specified image file '{}' not found"
     md_id_nf_emsg = "Image metadata for image ID '{0}' not found in database"
-
-
 
     # def dump_exception (self, xcpt):
     #     # xcpt is an instance of pytest.ExceptionInfo
@@ -59,15 +58,6 @@ class TestRoutes(object):
         assert errmsg in resp_msg
 
 
-    # def test_img_fetch(self, client):
-    #     """ Valid ID given: might succeed. """
-    #     args = { 'id': '250' }
-    #     with client:
-    #         istream = client.get("/img/fetch?id=250")
-    #         print(istream)
-    #         print(type(istream))
-    #         assert istream is not None
-
 
     def test_img_fetch_by_filter_nofilt(self, client):
         """ No filter argument. """
@@ -84,13 +74,13 @@ class TestRoutes(object):
         """ No such filter value. """
         filt = 'BAD1'
         coll = ''
-        errmsg = self.filt_nf_emsg.format(filt, coll)
         resp = client.get(f"/img/fetch_by_filter?filter={filt}")
         print(resp)
         assert resp is not None
         assert resp.status_code == 404
         resp_msg = str(resp.data, encoding='UTF-8') or ''
         print(resp_msg)
+        errmsg = self.filt_nf_emsg.format(filt, coll)
         assert errmsg in resp_msg
 
 
@@ -98,13 +88,13 @@ class TestRoutes(object):
         """ Valid filter value but no such collection value. """
         filt = 'JADES'
         coll = 'BADColl'
-        errmsg = self.filt_coll_nf_emsg.format(filt, coll)
         resp = client.get(f"/img/fetch_by_filter?filter={filt}&collection={coll}")
         print(resp)
         assert resp is not None
         assert resp.status_code == 404
         resp_msg = str(resp.data, encoding='UTF-8') or ''
         print(resp_msg)
+        errmsg = self.filt_coll_nf_emsg.format(filt, coll)
         assert errmsg in resp_msg
 
 
@@ -112,13 +102,13 @@ class TestRoutes(object):
         """ No such filter value and no such collection value. """
         coll = 'BADColl'
         filt = 'BADFilt'
-        errmsg = self.filt_coll_nf_emsg.format(filt, coll)
         resp = client.get(f"/img/fetch_by_filter?filter={filt}&collection={coll}")
         print(resp)
         assert resp is not None
         assert resp.status_code == 404
         resp_msg = str(resp.data, encoding='UTF-8') or ''
         print(resp_msg)
+        errmsg = self.filt_coll_nf_emsg.format(filt, coll)
         assert errmsg in resp_msg
 
 
@@ -183,9 +173,57 @@ class TestRoutes(object):
 
 
 
+    def test_img_metadata_by_collection_nocoll(self, client):
+        """ No collection argument. """
+        resp = client.get('/img/metadata_by_collection')
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == 400
+        resp_msg = str(resp.data, encoding='UTF-8') or ''
+        print(resp_msg)
+        assert self.coll_emsg in resp_msg
+
+
+    def test_img_metadata_by_collection_emptycoll(self, client):
+        """ No value for collection argument. """
+        coll = ''
+        resp = client.get(f"/img/metadata_by_collection?collection=")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == 400
+        resp_msg = str(resp.data, encoding='UTF-8') or ''
+        print(resp_msg)
+        assert self.coll_emsg in resp_msg
+
+
+    def test_img_metadata_by_collection_badcoll(self, client):
+        """ No such collection value. """
+        coll = 'BADColl'
+        resp = client.get(f"/img/metadata_by_collection?collection={coll}")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == 200
+        assert resp.data is not None
+        assert '[]' in str(resp.data)
+
+
+
     def test_img_metadata_by_filter_nofilt(self, client):
         """ No filter argument. """
         resp = client.get('/img/metadata_by_filter')
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == 400
+        resp_msg = str(resp.data, encoding='UTF-8') or ''
+        print(resp_msg)
+        assert self.filt_emsg in resp_msg
+
+
+    def test_img_metadata_by_filter_emptyfilt(self, client):
+        """ No value for filter argument. """
+        filt = ''
+        coll = ''
+        resp = client.get(f"/img/metadata_by_filter?filter=")
         print(resp)
         assert resp is not None
         assert resp.status_code == 400
@@ -198,7 +236,6 @@ class TestRoutes(object):
         """ No such filter value. """
         filt = 'BAD1'
         coll = ''
-        errmsg = self.filt_nf_emsg.format(filt, coll)
         resp = client.get(f"/img/metadata_by_filter?filter={filt}")
         print(resp)
         assert resp is not None
@@ -211,7 +248,6 @@ class TestRoutes(object):
         """ Valid filter value but no such collection value. """
         filt = 'JADES'
         coll = 'BADColl'
-        errmsg = self.filt_coll_nf_emsg.format(filt, coll)
         resp = client.get(f"/img/metadata_by_filter?filter={filt}&collection={coll}")
         print(resp)
         assert resp is not None
@@ -224,8 +260,65 @@ class TestRoutes(object):
         """ No such filter value and no such collection value. """
         coll = 'BADColl'
         filt = 'BADFilt'
-        errmsg = self.filt_coll_nf_emsg.format(filt, coll)
         resp = client.get(f"/img/metadata_by_filter?filter={filt}&collection={coll}")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == 200
+        assert resp.data is not None
+        assert '[]' in str(resp.data)
+
+
+
+    def testimg_img_metadata_by_path_nopath(self, client):
+        """ No path argument. """
+        resp = client.get('/img/metadata_by_path')
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == 400
+        resp_msg = str(resp.data, encoding='UTF-8') or ''
+        print(resp_msg)
+        assert self.path_emsg in resp_msg
+
+
+    def testimg_img_metadata_by_path_emptypath(self, client):
+        """ No value for path argument. """
+        resp = client.get('/img/metadata_by_path?path=')
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == 400
+        resp_msg = str(resp.data, encoding='UTF-8') or ''
+        print(resp_msg)
+        assert self.path_emsg in resp_msg
+
+
+    def testimg_img_metadata_by_path_badpath(self, client):
+        """ No such path as given, so empty list returned. """
+        badpath = '/bad/path'
+        resp = client.get(f"/img/metadata_by_path?path={badpath}")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == 200
+        assert resp.data is not None
+        assert '[]' in str(resp.data)
+
+
+    def test_img_metadata_by_path_badcoll(self, client):
+        """ Valid filter value but no such collection value. """
+        path = '/vos/images/DC20/F090W.fits'
+        coll = 'BADColl'
+        resp = client.get(f"/img/metadata_by_path?path={path}&collection={coll}")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == 200
+        assert resp.data is not None
+        assert '[]' in str(resp.data)
+
+
+    def test_img_metadata_by_path_badfilt_badcoll(self, client):
+        """ No such filter value and no such collection value. """
+        path = '/bad/path'
+        coll = 'BADColl'
+        resp = client.get(f"/img/metadata_by_path?path={path}&collection={coll}")
         print(resp)
         assert resp is not None
         assert resp.status_code == 200
