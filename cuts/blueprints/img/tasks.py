@@ -2,7 +2,7 @@
 # Module containing spawnable Celery tasks for the application.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Update for exception refactoring.
+#   Last Modified: Rename method to fetch_cutout_from_cache. Correct some doc strings.
 #
 import os
 
@@ -98,7 +98,7 @@ def image_metadata_by_filter (args):
 
 @celery.task()
 def image_metadata_by_path (args):
-    """ Return image metadata for a specific image by image path. """
+    """ Return image metadata for all images with a specific image path. """
     ipath = au.parse_ipath_arg(args, required=True)  # get required image path or error
     collection = au.parse_collection_arg(args)       # optional collection restriction
     return jsonify(imgr.image_metadata_by_path(ipath, collection=collection))
@@ -206,11 +206,11 @@ def cutout_by_filter (args):
 
 
 @celery.task()
-def fetch_cutout_by_filename (args):
-    """ Fetch a specific image cutout by filename. """
+def fetch_cutout_from_cache (args):
+    """ Fetch a specific image cutout from the cutout cache, by filename. """
     filename = args.get('filename')
     if (not filename):
-        errMsg = "An image cutout filename must be specified, via the 'filename' argument"
+        errMsg = "A cached filename must be specified, via the 'filename' argument"
         current_app.logger.error(errMsg)
         raise exceptions.RequestException(errMsg)
     return imgr.return_cutout_with_name(filename)
