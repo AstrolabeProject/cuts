@@ -14,6 +14,8 @@ class TestRoutes(object):
     path_emsg = "A valid image path must be specified, via the 'path' argument"
     path_nf_emsg = "Specified image file '{}' not found"
     md_id_nf_emsg = "Image metadata for image ID '{0}' not found in database"
+    co_fyl_emsg = "A cached filename must be specified, via the 'filename' argument"
+    co_nf_emsg = "Cached image cutout file '{0}' not found in cutouts cache directory"
 
     # def dump_exception (self, xcpt):
     #     # xcpt is an instance of pytest.ExceptionInfo
@@ -40,7 +42,7 @@ class TestRoutes(object):
         resp = client.get('/img/fetch')
         print(resp)
         assert resp is not None
-        assert resp.status_code == 400
+        assert resp.status_code == RequestException.ERROR_CODE
         resp_msg = str(resp.data, encoding='UTF-8') or ''
         print(resp_msg)
         assert self.id_emsg in resp_msg
@@ -51,7 +53,7 @@ class TestRoutes(object):
         resp = client.get('/img/fetch?id=99999')
         print(resp)
         assert resp is not None
-        assert resp.status_code == 404
+        assert resp.status_code == ImageNotFound.ERROR_CODE
         resp_msg = str(resp.data, encoding='UTF-8') or ''
         print(resp_msg)
         errmsg = self.id_nf_emsg.format('99999')
@@ -64,7 +66,7 @@ class TestRoutes(object):
         resp = client.get('/img/fetch_by_filter')
         print(resp)
         assert resp is not None
-        assert resp.status_code == 400
+        assert resp.status_code == RequestException.ERROR_CODE
         resp_msg = str(resp.data, encoding='UTF-8') or ''
         print(resp_msg)
         assert self.filt_emsg in resp_msg
@@ -77,7 +79,7 @@ class TestRoutes(object):
         resp = client.get(f"/img/fetch_by_filter?filter={filt}")
         print(resp)
         assert resp is not None
-        assert resp.status_code == 404
+        assert resp.status_code == ImageNotFound.ERROR_CODE
         resp_msg = str(resp.data, encoding='UTF-8') or ''
         print(resp_msg)
         errmsg = self.filt_nf_emsg.format(filt, coll)
@@ -91,7 +93,7 @@ class TestRoutes(object):
         resp = client.get(f"/img/fetch_by_filter?filter={filt}&collection={coll}")
         print(resp)
         assert resp is not None
-        assert resp.status_code == 404
+        assert resp.status_code == ImageNotFound.ERROR_CODE
         resp_msg = str(resp.data, encoding='UTF-8') or ''
         print(resp_msg)
         errmsg = self.filt_coll_nf_emsg.format(filt, coll)
@@ -105,7 +107,7 @@ class TestRoutes(object):
         resp = client.get(f"/img/fetch_by_filter?filter={filt}&collection={coll}")
         print(resp)
         assert resp is not None
-        assert resp.status_code == 404
+        assert resp.status_code == ImageNotFound.ERROR_CODE
         resp_msg = str(resp.data, encoding='UTF-8') or ''
         print(resp_msg)
         errmsg = self.filt_coll_nf_emsg.format(filt, coll)
@@ -118,7 +120,7 @@ class TestRoutes(object):
         resp = client.get('/img/fetch_by_path')
         print(resp)
         assert resp is not None
-        assert resp.status_code == 400
+        assert resp.status_code == RequestException.ERROR_CODE
         resp_msg = str(resp.data, encoding='UTF-8') or ''
         print(resp_msg)
         assert self.path_emsg in resp_msg
@@ -129,7 +131,7 @@ class TestRoutes(object):
         resp = client.get('/img/fetch_by_path?path=')
         print(resp)
         assert resp is not None
-        assert resp.status_code == 400
+        assert resp.status_code == RequestException.ERROR_CODE
         resp_msg = str(resp.data, encoding='UTF-8') or ''
         print(resp_msg)
         assert self.path_emsg in resp_msg
@@ -141,7 +143,7 @@ class TestRoutes(object):
         resp = client.get(f"/img/fetch_by_path?path={badpath}")
         print(resp)
         assert resp is not None
-        assert resp.status_code == 404
+        assert resp.status_code == ImageNotFound.ERROR_CODE
         resp_msg = str(resp.data, encoding='UTF-8') or ''
         print(resp_msg)
         errmsg = self.path_nf_emsg.format(badpath)
@@ -154,7 +156,7 @@ class TestRoutes(object):
         resp = client.get('/img/metadata')
         print(resp)
         assert resp is not None
-        assert resp.status_code == 400
+        assert resp.status_code == RequestException.ERROR_CODE
         resp_msg = str(resp.data, encoding='UTF-8') or ''
         print(resp_msg)
         assert self.id_emsg in resp_msg
@@ -165,7 +167,7 @@ class TestRoutes(object):
         resp = client.get('/img/metadata?id=99999&debug=true')
         print(resp)
         assert resp is not None
-        assert resp.status_code == 404
+        assert resp.status_code == ImageNotFound.ERROR_CODE
         resp_msg = str(resp.data, encoding='UTF-8') or ''
         print(resp_msg)
         errmsg = self.md_id_nf_emsg.format('99999')
@@ -178,7 +180,7 @@ class TestRoutes(object):
         resp = client.get('/img/metadata_by_collection')
         print(resp)
         assert resp is not None
-        assert resp.status_code == 400
+        assert resp.status_code == RequestException.ERROR_CODE
         resp_msg = str(resp.data, encoding='UTF-8') or ''
         print(resp_msg)
         assert self.coll_emsg in resp_msg
@@ -190,7 +192,7 @@ class TestRoutes(object):
         resp = client.get(f"/img/metadata_by_collection?collection=")
         print(resp)
         assert resp is not None
-        assert resp.status_code == 400
+        assert resp.status_code == RequestException.ERROR_CODE
         resp_msg = str(resp.data, encoding='UTF-8') or ''
         print(resp_msg)
         assert self.coll_emsg in resp_msg
@@ -213,7 +215,7 @@ class TestRoutes(object):
         resp = client.get('/img/metadata_by_filter')
         print(resp)
         assert resp is not None
-        assert resp.status_code == 400
+        assert resp.status_code == RequestException.ERROR_CODE
         resp_msg = str(resp.data, encoding='UTF-8') or ''
         print(resp_msg)
         assert self.filt_emsg in resp_msg
@@ -226,7 +228,7 @@ class TestRoutes(object):
         resp = client.get(f"/img/metadata_by_filter?filter=")
         print(resp)
         assert resp is not None
-        assert resp.status_code == 400
+        assert resp.status_code == RequestException.ERROR_CODE
         resp_msg = str(resp.data, encoding='UTF-8') or ''
         print(resp_msg)
         assert self.filt_emsg in resp_msg
@@ -274,7 +276,7 @@ class TestRoutes(object):
         resp = client.get('/img/metadata_by_path')
         print(resp)
         assert resp is not None
-        assert resp.status_code == 400
+        assert resp.status_code == RequestException.ERROR_CODE
         resp_msg = str(resp.data, encoding='UTF-8') or ''
         print(resp_msg)
         assert self.path_emsg in resp_msg
@@ -285,7 +287,7 @@ class TestRoutes(object):
         resp = client.get('/img/metadata_by_path?path=')
         print(resp)
         assert resp is not None
-        assert resp.status_code == 400
+        assert resp.status_code == RequestException.ERROR_CODE
         resp_msg = str(resp.data, encoding='UTF-8') or ''
         print(resp_msg)
         assert self.path_emsg in resp_msg
@@ -324,3 +326,67 @@ class TestRoutes(object):
         assert resp.status_code == 200
         assert resp.data is not None
         assert '[]' in str(resp.data)
+
+
+
+    def test_list_collections(self, client):
+        resp = client.get("/img/list_collections")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == 200
+        assert resp.data is not None
+        assert '[]' in str(resp.data)
+
+
+    def test_list_filters(self, client):
+        resp = client.get("/img/list_filters")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == 200
+        assert resp.data is not None
+        assert '[]' in str(resp.data)
+
+
+    def test_list_image_paths(self, client):
+        resp = client.get("/img/list_image_paths")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == 200
+        assert resp.data is not None
+        assert '[]' in str(resp.data)
+
+
+
+    def test_co_fetch_from_cache_noname(self, client):
+        """ No ID argument. """
+        resp = client.get('/co/fetch_from_cache')
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == RequestException.ERROR_CODE
+        resp_msg = str(resp.data, encoding='UTF-8') or ''
+        print(resp_msg)
+        assert self.co_fyl_emsg in resp_msg
+
+
+    def test_co_fetch_from_cache_emptyname(self, client):
+        """ No ID argument. """
+        resp = client.get('/co/fetch_from_cache?filename=')
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == RequestException.ERROR_CODE
+        resp_msg = str(resp.data, encoding='UTF-8') or ''
+        print(resp_msg)
+        assert self.co_fyl_emsg in resp_msg
+
+
+    def test_co_fetch_from_cache_badname(self, client):
+        """ No such record with given ID. """
+        nosuch = 'NoSuchFile'
+        resp = client.get(f"/co/fetch_from_cache?filename={nosuch}")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == ImageNotFound.ERROR_CODE
+        resp_msg = str(resp.data, encoding='UTF-8') or ''
+        print(resp_msg)
+        errmsg = self.co_nf_emsg.format(nosuch)
+        assert errmsg in resp_msg
