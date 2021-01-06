@@ -16,6 +16,13 @@ class TestRoutes(object):
     md_id_nf_emsg = "Image metadata for image ID '{0}' not found in database"
     co_fyl_emsg = "A cached filename must be specified, via the 'filename' argument"
     co_nf_emsg = "Cached image cutout file '{0}' not found in cutouts cache directory"
+    size_emsg = "A radius size (one of 'radius', 'sizeDeg', 'sizeArcMin', or 'sizeArcSec') must be specified."
+    size_convert_emsg = "Error trying to convert the given size specification to a number."
+    ra_emsg = "Right ascension must be specified, via the 'ra' argument"
+    ra_convert_emsg = "Error trying to convert the specified RA to a number."
+    dec_emsg = "Declination must be specified, via the 'dec' argument"
+    dec_convert_emsg = "Error trying to convert the specified DEC to a number."
+
 
     # def dump_exception (self, xcpt):
     #     # xcpt is an instance of pytest.ExceptionInfo
@@ -321,6 +328,139 @@ class TestRoutes(object):
         path = '/bad/path'
         coll = 'BADColl'
         resp = client.get(f"/img/metadata_by_path?path={path}&collection={coll}")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == 200
+        assert resp.data is not None
+        assert '[]' in str(resp.data)
+
+
+
+    def test_query_cone_noargs(self, client):
+        """ No CO arguments, size or coordinates, given. """
+        resp = client.get(f"/img/query_cone")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == RequestException.ERROR_CODE
+        resp_msg = str(resp.data, encoding='UTF-8') or ''
+        print(resp_msg)
+        assert self.size_emsg in resp_msg
+
+
+    def test_query_cone_coll_noco(self, client):
+        """ Collection but no CO arguments, size or coordinates, given. """
+        coll = 'JADES'
+        resp = client.get(f"/img/query_cone?collection={coll}")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == RequestException.ERROR_CODE
+        resp_msg = str(resp.data, encoding='UTF-8') or ''
+        print(resp_msg)
+        assert self.size_emsg in resp_msg
+
+
+    def test_query_cone_emptysize(self, client):
+        """ Empty size, no coordinates given. """
+        resp = client.get(f"/img/query_cone?sizeDeg=")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == RequestException.ERROR_CODE
+        resp_msg = str(resp.data, encoding='UTF-8') or ''
+        print(resp_msg)
+        assert self.size_emsg in resp_msg
+
+
+    def test_query_cone_size_arcsec(self, client):
+        """ Good size but no coordinates given. """
+        resp = client.get(f"/img/query_cone?sizeArcSec=30")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == RequestException.ERROR_CODE
+        resp_msg = str(resp.data, encoding='UTF-8') or ''
+        print(resp_msg)
+        assert self.ra_emsg in resp_msg
+
+
+    def test_query_cone_size_degree(self, client):
+        """ Good size but no coordinates given. """
+        resp = client.get(f"/img/query_cone?sizeDeg=0.47")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == RequestException.ERROR_CODE
+        resp_msg = str(resp.data, encoding='UTF-8') or ''
+        print(resp_msg)
+        assert self.ra_emsg in resp_msg
+
+
+    def test_query_cone_size_radius(self, client):
+        """ Good size but no coordinates given. """
+        resp = client.get(f"/img/query_cone?radius=0.005")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == RequestException.ERROR_CODE
+        resp_msg = str(resp.data, encoding='UTF-8') or ''
+        print(resp_msg)
+        assert self.ra_emsg in resp_msg
+
+
+    def test_query_cone_size_arcmin(self, client):
+        """ Good size but no coordinates given. """
+        resp = client.get(f"/img/query_cone?sizeArcMin=1")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == RequestException.ERROR_CODE
+        resp_msg = str(resp.data, encoding='UTF-8') or ''
+        print(resp_msg)
+        assert self.ra_emsg in resp_msg
+
+
+    def test_query_cone_badsize(self, client):
+        """ Bad size and no coordinates given. """
+        resp = client.get(f"/img/query_cone?radius=TWO")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == RequestException.ERROR_CODE
+        resp_msg = str(resp.data, encoding='UTF-8') or ''
+        print(resp_msg)
+        assert self.size_convert_emsg in resp_msg
+
+
+    def test_query_cone_badra(self, client):
+        """ Good size, bad RA value given. """
+        resp = client.get(f"/img/query_cone?sizeArcMin=1&ra=TWO")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == RequestException.ERROR_CODE
+        resp_msg = str(resp.data, encoding='UTF-8') or ''
+        print(resp_msg)
+        assert self.ra_convert_emsg in resp_msg
+
+
+    def test_query_cone_nodec(self, client):
+        """ Good size, good RA value, but no DEC value given. """
+        resp = client.get(f"/img/query_cone?sizeArcMin=1&ra=24.74")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == RequestException.ERROR_CODE
+        resp_msg = str(resp.data, encoding='UTF-8') or ''
+        print(resp_msg)
+        assert self.dec_emsg in resp_msg
+
+
+    def test_query_cone_baddec(self, client):
+        """ Good size, good RA value, but bad DEC value given. """
+        resp = client.get(f"/img/query_cone?sizeArcMin=1&ra=24.74&dec=one")
+        print(resp)
+        assert resp is not None
+        assert resp.status_code == RequestException.ERROR_CODE
+        resp_msg = str(resp.data, encoding='UTF-8') or ''
+        print(resp_msg)
+        assert self.dec_convert_emsg in resp_msg
+
+
+    def test_query_cone(self, client):
+        """ Good values, but no such records. """
+        resp = client.get(f"/img/query_cone?sizeArcSec=1&ra=-89.888&dec=0.0")
         print(resp)
         assert resp is not None
         assert resp.status_code == 200
