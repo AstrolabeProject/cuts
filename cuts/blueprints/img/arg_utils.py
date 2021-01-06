@@ -2,7 +2,7 @@
 # Utilities for argument parsing and validataion.
 #
 #   Written by: Tom Hicks. 12/28/2020.
-#   Last Modified: Catch conversion errors.
+#   Last Modified: Allow ObsCore RA & DEC arguments.
 #
 from flask import current_app
 
@@ -34,7 +34,7 @@ def parse_coordinate_args (args):
         of coordinate arguments. """
     co_args = {}
 
-    raStr = args.get('ra')
+    raStr = args.get('ra', args.get('s_ra'))  # allow ra or ObsCore s_ra
     if (raStr is not None):
         try:
             ra = float(raStr)
@@ -48,7 +48,7 @@ def parse_coordinate_args (args):
         current_app.logger.error(errMsg)
         raise exceptions.RequestException(errMsg)
 
-    decStr = args.get('dec')
+    decStr = args.get('dec', args.get('s_dec'))  # allow dec or ObsCore s_dec
     if (decStr is not None):
         try:
             dec = float(decStr)
