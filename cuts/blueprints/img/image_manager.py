@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Change exception and message for return_cutout_with_name.
+#   Last Modified: Implement is_cutout_cached and update get_cutout.
 #
 import os
 import sys
@@ -26,7 +26,7 @@ from cuts.blueprints.img.pg_sql import PostgreSQLManager
 
 DEFAULT_SELECT_FIELDS = [ 'id', 's_ra', 's_dec', 'file_name', 'file_path', 'obs_collection' ]
 
-IRODS_ZONE_NAME = 'iplant'                  # TODO: pull from irods env file
+IRODS_ZONE_NAME = 'iplant'                  # TODO: pull from irods env file LATER
 
 class ImageManager ():
     """ Class to serve images, metadata, and cutouts from a local database and image files. """
@@ -77,10 +77,8 @@ class ImageManager ():
         Return an image cutout, specified by the given cutout arguments.
         """
         co_filename = self.make_cutout_filename(ipath, co_args, collection=collection)
-        print(f"CO_FILENAME={co_filename}", file=sys.stderr) # REMOVE LATER
-        # if (not self.is_cutout_cached(co_filename)):    # TODO: IMPLEMENT LATER
-        co_filename = self.make_cutout_and_save(ipath, co_args, collection=collection)
-
+        if (not self.is_cutout_cached(co_filename)):
+            co_filename = self.make_cutout_and_save(ipath, co_args, collection=collection)
         return self.return_cutout_with_name(co_filename)  # return the image cutout
 
 
@@ -120,8 +118,14 @@ class ImageManager ():
         return self.pgsql.image_metadata_by_query(filt=filt, collection=collection)
 
 
+    def is_cutout_cached (self, co_filename):
+        """ Tell whether the given cutout filename exists in the cutouts directory or not. """
+        co_filepath = os.path.join(CUTOUTS_DIR, co_filename)
+        return True if fits_file_exists(co_filepath) else False
+
+
     def is_irods_file (self, filepath):
-        # TODO: move this method to iRods helper library
+        # TODO: move this method to iRods helper library LATER
         return (filepath and filepath.startswith(IRODS_ZONE_NAME))
 
 
@@ -234,8 +238,7 @@ class ImageManager ():
 
     def return_cutout_with_name (self, co_filename, mimetype=FITS_MIME_TYPE):
         """ Return the named cutout file, giving it the specified MIME type. """
-        co_filepath = os.path.join(CUTOUTS_DIR, co_filename)
-        if (fits_file_exists(co_filepath)):
+        if (self.is_cutout_cached(co_filename)):
             return send_from_directory(CUTOUTS_DIR, co_filename, mimetype=mimetype,
                                        as_attachment=True, attachment_filename=co_filename)
         errMsg = f"Cached image cutout file '{co_filename}' not found in cutouts cache directory"
@@ -261,8 +264,8 @@ class ImageManager ():
         to fetch methods for different storage devices (e.g., local disk, iRods).
         """
         if (self.is_irods_file(ipath)):
-            # TODO: IMPLEMENT iRods fetch image
-            raise exceptions.ImageNotFound(errMsg)
+            errMsg = "iRods connection capabilities not yet implemented."
+            raise exceptions.NotYetImplemented(errMsg)
 
         else:
             return self.return_image_at_filepath(ipath, mimetype=mimetype)
