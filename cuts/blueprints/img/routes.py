@@ -2,7 +2,7 @@
 # Top-level Flask routing module: answers requests or spawns Celery task to do it.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Rename methods to co_fetch_from_cache and fetch_cutout_from_cache.
+#   Last Modified: Some renames for consistency. Add query_coordinates.
 #
 from flask import Blueprint, jsonify, request
 # from flask_cors import CORS
@@ -106,6 +106,14 @@ def query_cone ():
     return query_cone(request.args)
 
 
+@img.route('/img/query_coordinates')
+def query_coordinates ():
+    """ List images which contain the given point. """
+    # required to avoid circular imports
+    from cuts.blueprints.img.tasks import query_coordinates
+    return query_coordinates(request.args)
+
+
 @img.route('/img/query_image')
 def query_image ():
     """ List images which meet the given filter and collection criteria. """
@@ -131,16 +139,16 @@ def co_list ():
 def co_cutout ():
     """ Make and return an image cutout. """
     # required to avoid circular imports
-    from cuts.blueprints.img.tasks import get_cutout
-    return get_cutout(request.args)
+    from cuts.blueprints.img.tasks import fetch_cutout
+    return fetch_cutout(request.args)
 
 
 @img.route('/co/cutout_by_filter')
 def co_cutout_by_filter ():
     """ Make and return an image cutout for an image in a certain bandwidth. """
     # required to avoid circular imports
-    from cuts.blueprints.img.tasks import cutout_by_filter
-    return cutout_by_filter(request.args)
+    from cuts.blueprints.img.tasks import fetch_cutout_by_filter
+    return fetch_cutout_by_filter(request.args)
 
 
 @img.route('/co/fetch_from_cache')
