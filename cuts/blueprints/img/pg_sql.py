@@ -1,7 +1,7 @@
 #
 # Class to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Another trivial var rename.
+#   Last Modified: Rename point parameters. Add query_coordinates. Add some query string debugging.
 #
 import sys
 
@@ -277,7 +277,7 @@ class PostgreSQLManager (ISQLBase):
         return tables
 
 
-    def query_cone (self, center_ra, center_dec, radius, collection=None, filt=None, select=None):
+    def query_cone (self, pt_ra, pt_dec, radius, collection=None, filt=None, select=None):
         """
         List metadata for images containing the given point within the given radius.
 
@@ -316,12 +316,69 @@ class PostgreSQLManager (ISQLBase):
             imgq += " AND" if where else " WHERE"
             imgq += " q3c_radial_query(s_ra, s_dec, (%s), (%s), (%s)) = TRUE"
             imgq += " ORDER BY id;"
-            qargs.extend([center_ra, center_dec, radius])
+            qargs.extend([pt_ra, pt_dec, radius])
+
+        if (self._DEBUG):
+            print(f"(query_cone): query='{imgq}'", file=sys.stderr)
 
         metadata = self.fetch_rows_2dicts(imgq, qargs)
 
         if (self._DEBUG):
-            print("(query_cone): => '{}'".format(metadata), file=sys.stderr)
+            print(f"(query_cone): => {metadata}", file=sys.stderr)
+
+        return metadata
+
+
+    def query_coordinates (self, pt_ra, pt_dec, collection=None, filt=None, select=None):
+        """
+        List metadata for images containing the point specified by the given coordinates and
+        the optional collection and filter arguments.
+
+        :param collection: if specified, restrict the listing to the named image collection.
+        :param filt: if specified, restrict the listing to images with the named filter.
+        :param select: an optional list of fields to be returned in the query (default ALL fields).
+
+        :return a list of metadata dictionaries for images which contain the specified point.
+        """
+        image_table = self.clean_table_name()
+
+        if (select is not None):
+            fields = ','.join([self.clean_id(fld) for fld in select])
+        else:
+            fields = '*'
+
+        imgq = "SELECT {} FROM {}".format(fields, image_table)
+        qargs = []                              # no query arguments yet
+
+        where = False
+        if (collection is not None):            # add collection argument to query
+            imgq += " WHERE obs_collection = (%s)"
+            qargs.append(self.clean_id(collection))
+            where = True
+
+        if (filt is not None):
+            if (where):
+                imgq += " AND"
+            else:
+                imgq += " WHERE"
+                where = True
+            imgq += " filter = (%s)"
+            qargs.append(self.clean_id(filt))
+
+        if (where):
+            imgq += " AND" if where else " WHERE"
+            imgq += " q3c_poly_query((%s), (%s),"
+            imgq += " ARRAY[im_ra1, im_dec1, im_ra2, im_dec2, im_ra3, im_dec3, im_ra4, im_dec4]) = TRUE"
+            imgq += " ORDER BY id;"
+            qargs.extend([pt_ra, pt_dec])
+
+        if (self._DEBUG):
+            print(f"(query_coordinates): query='{imgq}'", file=sys.stderr)
+
+        metadata = self.fetch_rows_2dicts(imgq, qargs)
+
+        if (self._DEBUG):
+            print(f"(query_coordinates): => {metadata}", file=sys.stderr)
 
         return metadata
 
