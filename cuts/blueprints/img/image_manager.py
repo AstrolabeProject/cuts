@@ -3,7 +3,8 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Implement is_cutout_cached and update get_cutout.
+#   Last Modified: Add config debug to ctor. Refactor common cutout logic here, cleanup
+#                  some cutout methods. Add filter to cutout filename. Add query_coordinates.
 #
 import os
 import sys
@@ -18,13 +19,13 @@ from astropy.nddata import Cutout2D
 from astropy.nddata.utils import NoOverlapError, PartialOverlapError
 from astropy.wcs import WCS
 
-from config.settings import CUTOUTS_DIR, CUTOUTS_MODE, FITS_IMAGE_EXTS, FITS_MIME_TYPE, IMAGES_DIR
+from config.settings import CUTOUTS_DIR, CUTOUTS_MODE, DEBUG, FITS_IMAGE_EXTS, FITS_MIME_TYPE, IMAGES_DIR
 import cuts.blueprints.img.exceptions as exceptions
 from cuts.blueprints.img.fits_utils import fits_file_exists
 from cuts.blueprints.img.pg_sql import PostgreSQLManager
 
 
-DEFAULT_SELECT_FIELDS = [ 'id', 's_ra', 's_dec', 'file_name', 'file_path', 'obs_collection' ]
+DEFAULT_SELECT_FIELDS = [ 'id', 's_ra', 's_dec', 'file_name', 'file_path', 'filter', 'obs_collection' ]
 
 IRODS_ZONE_NAME = 'iplant'                  # TODO: pull from irods env file LATER
 
@@ -33,7 +34,9 @@ class ImageManager ():
 
     def __init__ (self, args={}):
         self.args = args                      # save arguments passed to this instance
-        self._DEBUG = args.get('debug', False)
+        self._DEBUG = DEBUG                   # configuration setting
+        if (args.get('debug')):               # passed in setting overrides configuration
+            self._DEBUG = True
         self.pgsql = PostgreSQLManager(args)  # create a DB manager
 
 
@@ -72,14 +75,45 @@ class ImageManager ():
         return self.return_image_at_path(ipath, mimetype=mimetype) if ipath else None
 
 
-    def get_cutout (self, ipath, co_args, collection=None):
+    def get_cutout (self, ipath, co_args, collection=None, filt=None):
         """
-        Return an image cutout, specified by the given cutout arguments.
+        Return an image cutout, specified by the given cutout arguments and optional
+        collection and filter arguments.
         """
-        co_filename = self.make_cutout_filename(ipath, co_args, collection=collection)
+        co_filename = self.make_cutout_filename(ipath, co_args, collection=collection, filt=filt)
         if (not self.is_cutout_cached(co_filename)):
-            co_filename = self.make_cutout_and_save(ipath, co_args, collection=collection)
-        return self.return_cutout_with_name(co_filename)  # return the image cutout
+            self.make_cutout_and_save(ipath, co_args, co_filename)
+        return self.return_cutout_with_name(co_filename)  # return the actual image cutout
+
+
+    def get_image_or_cutout (self, co_args, collection=None, filt=None):
+        """
+        Return an entire image or a cutout, based on the given cutout arguments and
+        optional collection and filter arguments.
+        """
+        if (not co_args.get('co_size')):    # if no size specified, return the entire image
+            image_matches = self.query_coordinates(co_args, filt=filt, collection=collection)
+            if (not image_matches):
+                coll = f"in collection '{collection}'" if (collection) else ''
+                fltr = f"with filter '{filt}'" if (filt) else ''
+                errMsg = f"No matching image for coordinates {fltr} {coll} was found"
+                current_app.logger.error(errMsg)
+                raise exceptions.ImageNotFound(errMsg)
+            else:                                              # found at least one matching image
+                image_path = image_matches[0].get('file_path') # select first matching image
+                return self.return_image_at_path(image_path)   # exit and return entire image
+
+        else:                               # cutout size given, so make cutout
+            image_matches = self.query_cone(co_args, filt=filt, collection=collection)
+            if (not image_matches):
+                coll = f"in collection '{collection}'" if (collection) else ''
+                fltr = f"with filter '{filt}'" if (filt) else ''
+                errMsg = f"No matching image for coordinates (in cone) {fltr} {coll} was found"
+                current_app.logger.error(errMsg)
+                raise exceptions.ImageNotFound(errMsg)
+            else:                           # else make, cache, and return cutout
+                image_path = image_matches[0].get('file_path') # select first matching image
+                return self.get_cutout(image_path, co_args, filt=filt, collection=collection)
 
 
     def image_metadata (self, uid, select=None):
@@ -182,33 +216,36 @@ class ImageManager ():
         return cutout
 
 
-    def make_cutout_and_save (self, ipath, co_args, collection=None):
+    def make_cutout_and_save (self, ipath, co_args, co_filename):
         """
         Cut out a section of the image at the given image path, using the specifications
-        in the give cutout arguments, name the cutout, save it to a file in the cutout
-        cache directory, then return the cached cutout filename.
+        in the given cutout arguments, then save it in the cutout cache directory with
+        the given cutout filename.
         """
         hdu = fits.open(ipath)[0]
         cutout = self.make_cutout(hdu, co_args)
+        try:
+            self.write_cutout(hdu, co_filename)   # write the cutout to new FITS file
+        except Exception as ex:
+            errMsg = f"Unexpected error while writing image cutout to cache file '{co_filename}'"
+            current_app.logger.error(errMsg)
+            raise exceptions.ServerError(errMsg)
 
-        # write the cutout to a new FITS file and then return its filename
-        co_filename = self.make_cutout_filename(ipath, co_args, collection=collection)
-        self.write_cutout(hdu, co_filename)
 
-        return co_filename                  # return the cached cutout filename
-
-
-    def make_cutout_filename (self, ipath, co_args, collection=None):
-        """ Return a filename for the Astropy cutout from info in the given parameters. """
+    def make_cutout_filename (self, ipath, co_args, collection=None, filt=None):
+        """
+        Return a filename for the image cutout using the coordinate/size arguments and
+        the optional collection and filter arguments. The coordinate arguments must
+        contain values for 'ra', 'dec', 'size', and 'units' fields.
+        """
         basename = os.path.splitext(os.path.basename(ipath))[0]
         ra = co_args.get('ra')
         dec = co_args.get('dec')
         size = co_args.get('size')
         units = co_args.get('units').to_string()
-        # shape = cutout.shape
-        coll = self.pgsql.clean_id(collection) if (collection is not None) else ''
-        # return f"{coll}_{basename}__{ra}_{dec}_{shape[0]}x{shape[1]}.fits"
-        return f"{coll}_{basename}__{ra}_{dec}_{size}_{units}.fits"
+        coll = f"{self.pgsql.clean_id(collection)}_" if (collection is not None) else ''
+        fltr = f"{self.pgsql.clean_id(filt)}_" if (filt is not None) else ''
+        return f"{coll}{fltr}_{basename}__{ra}_{dec}_{size}_{units}.fits"
 
 
     def query_cone (self, co_args, collection=None, filt=None, select=DEFAULT_SELECT_FIELDS):
@@ -222,6 +259,18 @@ class ImageManager ():
         dec = co_args.get('dec')
         radius = co_args.get('size')
         return self.pgsql.query_cone(ra, dec, radius, collection=collection, filt=filt, select=select)
+
+
+    def query_coordinates (self, co_args, collection=None, filt=None, select=DEFAULT_SELECT_FIELDS):
+        """
+        Return a list of image metadata for images which contain a specific point specified by
+        the given coordiate arguments, which must include values for 'ra' and 'dec'.
+        If an image collection is specified, restrict the search to the specified collection.
+        :return a possibly empty list of image metadata dictionaries
+        """
+        ra = co_args.get('ra')
+        dec = co_args.get('dec')
+        return self.pgsql.query_coordinates(ra, dec, collection=collection, filt=filt, select=select)
 
 
     def query_image (self, collection=None, filt=None, select=DEFAULT_SELECT_FIELDS):
