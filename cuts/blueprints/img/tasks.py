@@ -2,7 +2,7 @@
 # Module containing spawnable Celery tasks for the application.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Rename method to fetch_cutout_from_cache. Correct some doc strings.
+#   Last Modified: Refactor common cutout logic to image manager. Add query_coordinates.
 #
 import os
 
@@ -138,6 +138,17 @@ def query_cone (args):
 
 
 @celery.task()
+def query_coordinates (args):
+    """
+    Return some metadata for images which contain the given point.
+    """
+    co_args = au.parse_cutout_args(args)        # get coordinates
+    collection = au.parse_collection_arg(args)  # optional collection restriction
+    filt = au.parse_filter_arg(args)            # optional filter restriction
+    return jsonify(imgr.query_coordinates(co_args, collection=collection, filt=filt))
+
+
+@celery.task()
 def query_image (args):
     """ List images which meet the given filter and collection criteria. """
     collection = au.parse_collection_arg(args)    # optional collection restriction
@@ -157,52 +168,27 @@ def list_cutouts (args):
 
 
 @celery.task()
-def get_cutout (args):
+def fetch_cutout (args):
     """
     Return an image cutout. if cutout size is not specified, return the entire image.
     """
     # parse the parameters for the cutout
-    co_args = au.parse_cutout_args(args)    
+    co_args = au.parse_cutout_args(args)
     collection = au.parse_collection_arg(args)
-
-    # figure out which image to make a cutout from based on the cutout parameters
-    image_matches = imgr.query_cone(co_args, collection=collection)   
-    if (not image_matches):
-        errMsg = "No matching image was not found."
-        current_app.logger.error(errMsg)
-        raise exceptions.ImageNotFound(errMsg)
-    else:
-        image_path = image_matches[0].get('file_path')
-
-    if (not co_args.get('co_size')):        # if no size specified, return the entire image
-        return imgr.return_image_at_path(image_path)  # exit and return entire image
-    else:                                   # else make, cache, and return cutout
-        return imgr.get_cutout(image_path, co_args, collection=collection)
+    filt = au.parse_filter_arg(args)
+    return imgr.get_image_or_cutout(co_args, filt=filt, collection=collection)
 
 
 @celery.task()
-def cutout_by_filter (args):
+def fetch_cutout_by_filter (args):
     """ Make and return an image cutout for a filtered image.
         The band is specified by the required 'filter' argument. """
 
     # parse the parameters for the cutout
     co_args = au.parse_cutout_args(args)
-    collection = au.parse_collection_arg(args)
     filt = au.parse_filter_arg(args, required=True)  # test for required filter
-
-    # figure out which image to make a cutout from based on the cutout parameters
-    image_matches = imgr.query_cone(co_args, collection=collection, filt=filt)   
-    if (not image_matches):
-        errMsg = f"No matching image was not found for filter '{filt}'."
-        current_app.logger.error(errMsg)
-        raise exceptions.ImageNotFound(errMsg)
-    else:
-        image_path = image_matches[0].get('file_path')
-
-    if (not co_args.get('co_size')):        # if no size specified, return the entire image
-        return imgr.return_image_at_path(image_path)  # exit and return entire image
-    else:                                   # else make, cache, and return cutout
-        return imgr.get_cutout(image_path, co_args, collection=collection)
+    collection = au.parse_collection_arg(args)
+    return imgr.get_image_or_cutout(co_args, filt=filt, collection=collection)
 
 
 @celery.task()
