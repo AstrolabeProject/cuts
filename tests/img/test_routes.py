@@ -469,34 +469,6 @@ class TestRoutes(object):
 
 
 
-    def test_list_collections(self, client):
-        resp = client.get("/img/list_collections")
-        print(resp)
-        assert resp is not None
-        assert resp.status_code == 200
-        assert resp.data is not None
-        assert '[]' in str(resp.data)
-
-
-    def test_list_filters(self, client):
-        resp = client.get("/img/list_filters")
-        print(resp)
-        assert resp is not None
-        assert resp.status_code == 200
-        assert resp.data is not None
-        assert '[]' in str(resp.data)
-
-
-    def test_list_image_paths(self, client):
-        resp = client.get("/img/list_image_paths")
-        print(resp)
-        assert resp is not None
-        assert resp.status_code == 200
-        assert resp.data is not None
-        assert '[]' in str(resp.data)
-
-
-
     def test_co_list(self, client):
         resp = client.get("/co/list")
         print(resp)
