@@ -27,7 +27,7 @@ from cuts.blueprints.img.pg_sql import PostgreSQLManager
 
 DEFAULT_SELECT_FIELDS = [ 'id', 's_ra', 's_dec', 'file_name', 'file_path', 'filter', 'obs_collection' ]
 
-IRODS_ZONE_NAME = 'iplant'                  # TODO: pull from irods env file LATER
+IRODS_ZONE_NAME = 'iplant'                    # TODO: pull from irods env file LATER
 
 class ImageManager ():
     """ Class to serve images, metadata, and cutouts from a local database and image files. """
@@ -35,7 +35,7 @@ class ImageManager ():
     def __init__ (self, args={}):
         self.args = args                      # save arguments passed to this instance
         self._DEBUG = DEBUG                   # configuration setting
-        if (args.get('debug')):               # passed in setting overrides configuration
+        if (args.get('debug')):               # given settings override configuration
             self._DEBUG = True
         self.pgsql = PostgreSQLManager(args)  # create a DB manager
 
