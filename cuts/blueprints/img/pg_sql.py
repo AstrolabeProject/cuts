@@ -1,7 +1,7 @@
 #
 # Class to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Rename point parameters. Add query_coordinates. Add some query string debugging.
+#   Last Modified: Allow schema name & md table name override in ctor args.
 #
 import sys
 
@@ -16,8 +16,6 @@ from cuts.blueprints.img.i_sql import ISQLBase
 
 class PostgreSQLManager (ISQLBase):
 
-    DEFAULT_SCHEMA_NAME = 'sia'
-    DEFAULT_SQL_IMAGE_MD_TABLE = 'jwst'
     DEFAULT_QUERY_FIELDS = [ 'id', 'file_path' ]
 
 
@@ -27,8 +25,8 @@ class PostgreSQLManager (ISQLBase):
         """
         super().__init__(args)
 
-        self.db_schema_name = self.dbconfig.get('db_schema_name', self.DEFAULT_SCHEMA_NAME)
-        self.sql_img_md_table = self.dbconfig.get('sql_img_md_table', self.DEFAULT_SQL_IMAGE_MD_TABLE)
+        self.db_schema_name = args.get('db_schema_name', self.dbconfig.get('db_schema_name'))
+        self.sql_img_md_table = args.get('sql_img_md_table', self.dbconfig.get('sql_img_md_table'))
 
 
     def clean_table_name (self, schema_name=None, table_name=None):
