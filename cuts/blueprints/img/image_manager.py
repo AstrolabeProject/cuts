@@ -3,8 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Add config debug to ctor. Refactor common cutout logic here, cleanup
-#                  some cutout methods. Add filter to cutout filename. Add query_coordinates.
+#   Last Modified: Do not separate size & units in cache filename.
 #
 import os
 import sys
@@ -245,7 +244,7 @@ class ImageManager ():
         units = co_args.get('units').to_string()
         coll = f"{self.pgsql.clean_id(collection)}_" if (collection is not None) else ''
         fltr = f"{self.pgsql.clean_id(filt)}_" if (filt is not None) else ''
-        return f"{coll}{fltr}_{basename}__{ra}_{dec}_{size}_{units}.fits"
+        return f"{coll}{fltr}_{basename}__{ra}_{dec}_{size}{units}.fits"
 
 
     def query_cone (self, co_args, collection=None, filt=None, select=DEFAULT_SELECT_FIELDS):
