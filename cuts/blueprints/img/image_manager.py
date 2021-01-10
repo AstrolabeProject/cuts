@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Cleanup unused globals settings. Accept or default cutouts parameters.
+#   Last Modified: Add cutouts dir param to make_cutout_and_save.
 #
 import os
 import sys
@@ -226,7 +226,7 @@ class ImageManager ():
         return cutout
 
 
-    def make_cutout_and_save (self, ipath, co_args, co_filename):
+    def make_cutout_and_save (self, ipath, co_args, co_filename, co_dir=DEFAULT_CUTOUTS_DIR):
         """
         Cut out a section of the image at the given image path, using the specifications
         in the given cutout arguments, then save it in the cutout cache directory with
@@ -235,9 +235,10 @@ class ImageManager ():
         hdu = fits.open(ipath)[0]
         cutout = self.make_cutout(hdu, co_args)
         try:
-            self.write_cutout(hdu, co_filename)   # write the cutout to new FITS file
+            # write the cutout to a new FITS file in the cutouts cache dir
+            self.write_cutout(hdu, co_filename, co_dir=co_dir)
         except Exception as ex:
-            errMsg = f"Unexpected error while writing image cutout to cache file '{co_filename}'"
+            errMsg = f"Unexpected error while writing image cutout to cache file '{co_filename}' in cache directory '{co_dir}'"
             current_app.logger.error(errMsg)
             raise exceptions.ServerError(errMsg)
 
