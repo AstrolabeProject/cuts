@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Do not separate size & units in cache filename.
+#   Last Modified: Cleanup unused globals settings. Accept or default cutouts parameters.
 #
 import os
 import sys
@@ -18,15 +18,20 @@ from astropy.nddata import Cutout2D
 from astropy.nddata.utils import NoOverlapError, PartialOverlapError
 from astropy.wcs import WCS
 
-from config.settings import CUTOUTS_DIR, CUTOUTS_MODE, DEBUG, FITS_IMAGE_EXTS, FITS_MIME_TYPE, IMAGES_DIR
+from config.settings import DEBUG
 import cuts.blueprints.img.exceptions as exceptions
-from cuts.blueprints.img.fits_utils import fits_file_exists
+from cuts.blueprints.img.fits_utils import fits_file_exists, FITS_MIME_TYPE
 from cuts.blueprints.img.pg_sql import PostgreSQLManager
 
 
-DEFAULT_SELECT_FIELDS = [ 'id', 's_ra', 's_dec', 'file_name', 'file_path', 'filter', 'obs_collection' ]
+DEFAULT_CUTOUTS_DIR = '/vos/cutouts'
+DEFAULT_CUTOUTS_MODE = 'trim'
+
+DEFAULT_SELECT_FIELDS = [ 'id', 's_ra', 's_dec', 'file_name', 'file_path',
+                          'filter', 'obs_collection' ]
 
 IRODS_ZONE_NAME = 'iplant'                    # TODO: pull from irods env file LATER
+
 
 class ImageManager ():
     """ Class to serve images, metadata, and cutouts from a local database and image files. """
@@ -151,9 +156,12 @@ class ImageManager ():
         return self.pgsql.image_metadata_by_query(filt=filt, collection=collection)
 
 
-    def is_cutout_cached (self, co_filename):
-        """ Tell whether the given cutout filename exists in the cutouts directory or not. """
-        co_filepath = os.path.join(CUTOUTS_DIR, co_filename)
+    def is_cutout_cached (self, co_filename, co_dir=DEFAULT_CUTOUTS_DIR):
+        """
+        Tell whether the given cutout filename exists in the given (or default)
+        cutouts directory or not.
+        """
+        co_filepath = os.path.join(co_dir, co_filename)
         return True if fits_file_exists(co_filepath) else False
 
 
@@ -169,9 +177,12 @@ class ImageManager ():
         return colls
 
 
-    def list_cutouts (self):
-        """ Return a list of image cutout filenames in the cutouts cache directory. """
-        return [ fyl for fyl in os.listdir(CUTOUTS_DIR) if os.path.isfile(os.path.join(CUTOUTS_DIR, fyl)) ]
+    def list_cutouts (self, co_dir=DEFAULT_CUTOUTS_DIR):
+        """
+        Return a list of image cutout filenames from the given (or default)
+        cutouts cache directory.
+        """
+        return [ fyl for fyl in os.listdir(co_dir) if os.path.isfile(os.path.join(co_dir, fyl)) ]
 
 
     def list_filters (self, collection=None):
@@ -192,7 +203,7 @@ class ImageManager ():
         return paths
 
 
-    def make_cutout (self, hdu, co_args):
+    def make_cutout (self, hdu, co_args, co_mode=DEFAULT_CUTOUTS_MODE):
         """
         Make and return an image cutout for the image HDU, using the given cutout parameters.
         """
@@ -201,7 +212,7 @@ class ImageManager ():
         # make the cutout and update its WCS info
         try:
             cutout = Cutout2D(hdu.data, position=co_args['center'], size=co_args['co_size'],
-                              wcs=wcs, mode=CUTOUTS_MODE)
+                              wcs=wcs, mode=co_mode)
         except (NoOverlapError, PartialOverlapError):
             sky = co_args['center']
             errMsg = f"There is no overlap between the reference image and the given center coordinate: {sky.ra.value}, {sky.dec.value} {sky.ra.unit.name} ({sky.frame.name})"
@@ -284,10 +295,10 @@ class ImageManager ():
         return self.pgsql.query_image(collection=collection, filt=filt, select=select)
 
 
-    def return_cutout_with_name (self, co_filename, mimetype=FITS_MIME_TYPE):
+    def return_cutout_with_name (self, co_filename, co_dir=DEFAULT_CUTOUTS_DIR, mimetype=FITS_MIME_TYPE):
         """ Return the named cutout file, giving it the specified MIME type. """
         if (self.is_cutout_cached(co_filename)):
-            return send_from_directory(CUTOUTS_DIR, co_filename, mimetype=mimetype,
+            return send_from_directory(co_dir, co_filename, mimetype=mimetype,
                                        as_attachment=True, attachment_filename=co_filename)
         errMsg = f"Cached image cutout file '{co_filename}' not found in cutouts cache directory"
         current_app.logger.error(errMsg)
@@ -319,7 +330,10 @@ class ImageManager ():
             return self.return_image_at_filepath(ipath, mimetype=mimetype)
 
 
-    def write_cutout (self, hdu, co_filename, overwrite=True):
-        """ Write the contents of the given HDU to the named file in the cutouts directory. """
-        co_filepath = os.path.join(CUTOUTS_DIR, co_filename)
+    def write_cutout (self, hdu, co_filename, co_dir=DEFAULT_CUTOUTS_DIR, overwrite=True):
+        """
+        Write the contents of the given HDU to the named file in the given (or default)
+        cutouts directory.
+        """
+        co_filepath = os.path.join(co_dir, co_filename)
         hdu.writeto(co_filepath, overwrite=True)

@@ -31,22 +31,6 @@ SQL_FIELDS_HYBRID = [ 's_dec', 's_ra', 'obs_collection', 'is_public' ]
 
 
 #
-# Image service
-#
-
-# root directory for all data served by this server
-DATA_ROOT = '/vos'
-
-CUTOUTS_DIR = "{}/cutouts".format(DATA_ROOT)
-CUTOUTS_MODE = 'trim'
-
-FITS_IMAGE_EXTS = [ 'fits', 'fits.gz' ]
-FITS_MIME_TYPE = 'image/fits'
-
-IMAGES_DIR = "{}/images".format(DATA_ROOT)
-
-
-#
 # Celery worker service
 #
 CELERY_BROKER_URL = 'redis://:devpassword@vos_redis:6379/0'
