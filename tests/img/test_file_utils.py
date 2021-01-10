@@ -1,13 +1,12 @@
 # Tests for the file utilities module.
 #   Written by: Tom Hicks. 5/22/2020.
-#   Last Modified: Port to Cuts.
+#   Last Modified: Update for test resources change.
 #
 import os
 from pathlib import Path
 
 import cuts.blueprints.img.file_utils as utils
-
-from tests import TEST_DIR
+from tests import TEST_RESOURCES_DIR
 
 
 class TestFileUtils(object):
@@ -18,10 +17,10 @@ class TestFileUtils(object):
     fylPath = '/tmp/HiGhLy_UnLiKeLy'
     fylLink = '/tmp/linkToHiGhLy_UnLiKeLy'
 
-    empty_tstfyl = "{}/resources/empty.txt".format(TEST_DIR)
-    m13_tstfyl = "{}/resources/m13.fits".format(TEST_DIR)
-    mdkeys_tstfyl = "{}/resources/mdkeys.txt".format(TEST_DIR)
-    table_tstfyl = "{}/resources/small_table.fits".format(TEST_DIR)
+    empty_tstfyl  = f"{TEST_RESOURCES_DIR}/empty.txt"
+    m13_tstfyl    = f"{TEST_RESOURCES_DIR}/m13.fits"
+    mdkeys_tstfyl = f"{TEST_RESOURCES_DIR}/mdkeys.txt"
+    table_tstfyl  = f"{TEST_RESOURCES_DIR}/small_table.fits"
 
 
     def test_filename_core(self):

@@ -6,8 +6,10 @@ TEST_DIR = None
 TEST_DBCONFIG_FILEPATH = None
 
 if (os.environ.get('RUNNING_IN_CONTAINER') is not None):
-    TEST_DIR = "{}/tests".format(APP_ROOT)
-    TEST_DBCONFIG_FILEPATH = "{}/resources/container-dbconfig.ini".format(TEST_DIR)
+    TEST_DIR = f"{APP_ROOT}/tests"
+    TEST_RESOURCES_DIR = f"{TEST_DIR}/resources"
+    TEST_DBCONFIG_FILEPATH = f"{TEST_RESOURCES_DIR}/container-dbconfig.ini"
 else:
-    TEST_DIR = "{}/tests".format(os.getcwd())
-    TEST_DBCONFIG_FILEPATH = "{}/resources/venv-dbconfig.ini".format(TEST_DIR)
+    TEST_DIR = f"{os.getcwd()}/tests"
+    TEST_RESOURCES_DIR = f"{TEST_DIR}/resources"
+    TEST_DBCONFIG_FILEPATH = f"{TEST_RESOURCES_DIR}/venv-dbconfig.ini"

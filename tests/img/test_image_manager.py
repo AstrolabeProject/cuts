@@ -1,3 +1,7 @@
+# Tests for the image manager module.
+#   Written by: Tom Hicks. 1/9/2021.
+#   Last Modified: Update for test resources change.
+#
 import os
 import pytest
 
@@ -5,7 +9,7 @@ from astropy import units as u
 
 from cuts.blueprints.img.exceptions import ImageNotFound, RequestException, ServerError
 from cuts.blueprints.img.image_manager import IRODS_ZONE_NAME, ImageManager
-from tests import TEST_DIR, TEST_DBCONFIG_FILEPATH
+from tests import TEST_RESOURCES_DIR, TEST_DBCONFIG_FILEPATH
 
 class TestImageManager(object):
 
@@ -24,7 +28,10 @@ class TestImageManager(object):
     dc19_size = 9
     dc20_size = 9
 
-    imgr = ImageManager(test_args)
+    # hh_tstfyl = f"{TEST_RESOURCES_DIR}/HorseHead.fits"
+    # m13_tstfyl = f"{TEST_RESOURCES_DIR}/m13.fits"
+
+    imgr = ImageManager(test_args)          # instance of class under tests
 
 
     def test_setup_app (self, app):
@@ -137,6 +144,12 @@ class TestImageManager(object):
         print(res)
         assert res is not None
         assert len(res) == 0
+
+
+
+    def test_is_cutout_cached(self):
+        assert self.imgr.is_cutout_cached('nosuch.fits', co_dir='/tmp') is False
+        assert self.imgr.is_cutout_cached('m13.fits', co_dir=TEST_RESOURCES_DIR) is True
 
 
 
@@ -270,3 +283,9 @@ class TestImageManager(object):
         print(fname)
         assert fname is not None
         assert fname == 'JADES_AFILT__m13__250.4226_36.4602_2.4arcmin.fits'
+
+
+    def test_CUTOUT_METHODS(self):
+        co_dir = '/tmp'
+        co_filename = f"_m13__250.4226_36.4602_1arcsec.fits"
+        assert self.imgr.is_cutout_cached(co_filename, co_dir) is False

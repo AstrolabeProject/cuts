@@ -1,6 +1,6 @@
 # Tests of the FITS specific utilities module.
 #   Written by: Tom Hicks. 4/7/2020.
-#   Last Modified: Port to Cuts.
+#   Last Modified: Update for test resources change.
 #
 import json
 import pytest
@@ -11,16 +11,15 @@ from astropy.time.core import Time
 from astropy.io import fits
 
 import cuts.blueprints.img.fits_utils as utils
-from tests import TEST_DIR
+from tests import TEST_RESOURCES_DIR
 
 
 class TestFitsUtils(object):
 
-    empty_tstfyl = "{}/resources/empty.txt".format(TEST_DIR)
-    m13_tstfyl = "{}/resources/m13.fits".format(TEST_DIR)
-    mdkeys_tstfyl = "{}/resources/mdkeys.txt".format(TEST_DIR)
-    table_tstfyl = "{}/resources/small_table.fits".format(TEST_DIR)
-    resources_tstdir = "{}/resources".format(TEST_DIR)
+    empty_tstfyl  = f"{TEST_RESOURCES_DIR}/empty.txt"
+    m13_tstfyl    = f"{TEST_RESOURCES_DIR}/m13.fits"
+    mdkeys_tstfyl = f"{TEST_RESOURCES_DIR}/mdkeys.txt"
+    table_tstfyl  = f"{TEST_RESOURCES_DIR}/small_table.fits"
 
 
     def test_bitpix_size(self):
@@ -53,7 +52,7 @@ class TestFitsUtils(object):
 
 
     def test_gen_fits_file_paths(self):
-        ffs = [ f for f in utils.gen_fits_file_paths(self.resources_tstdir)]
+        ffs = [ f for f in utils.gen_fits_file_paths(TEST_RESOURCES_DIR)]
         print(ffs)
         assert len(ffs) > 0
         assert self.m13_tstfyl in ffs
