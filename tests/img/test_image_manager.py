@@ -1,6 +1,6 @@
 # Tests for the image manager module.
 #   Written by: Tom Hicks. 1/9/2021.
-#   Last Modified: Update for test resources change.
+#   Last Modified: Update for collection cleaning, extras to XTRAS.
 #
 import os
 import pytest
@@ -19,12 +19,12 @@ class TestImageManager(object):
     }
 
     bad_path = '/bad/path'
-    m13_path = '/vos/images/JADES/m13.fits'
+    m13_path = '/vos/images/XTRAS/m13.fits'
     dc19_path = '/vos/images/DC19/F090W.fits'
     dc20_path = '/vos/images/DC20/F356W.fits'
     jades_path = '/vos/images/JADES/goods_s_F277W_2018_08_29.fits'
 
-    jades_size = 11
+    jades_size = 9
     dc19_size = 9
     dc20_size = 9
 
