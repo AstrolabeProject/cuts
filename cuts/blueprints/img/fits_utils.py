@@ -1,7 +1,7 @@
 #
 # Module to provide FITS utility functions for Astrolabe code.
 #   Written by: Tom Hicks. 1/26/2020.
-#   Last Modified: Port from Image MetaData ToolKit project.
+#   Last Modified: Sync with image/catalog files tests from imdtoolkit project.
 #
 import fnmatch
 import os
@@ -179,14 +179,34 @@ def get_WCS (ff_hdus_list, which_hdu=0):
     return wcs.WCS(ff_hdus_list[which_hdu].header)
 
 
-def is_catalog_file (ff_hdus_list, which_hdu=1):
+def has_catalog_data (ff_hdus_list, which_hdu=1):
     """
-    Tell whether the given FITS file is a FITS catalog or not,
-    based on a specified HDU (defaults to the first extension).
-    Assumes: a catalog HDU will be of type BINTABLE or TABLE:
+    Tell whether the given FITS file has catalog data at the given HDU
+    (defaults to the first extension).
+    Assumes: a catalog HDU will be an extension of type BINTABLE or TABLE.
     """
-    return ( (len(ff_hdus_list) > which_hdu) and
-             (ff_hdus_list[which_hdu].header.get('XTENSION') in ['BINTABLE', 'TABLE']) )
+    if (which_hdu == 0):                    # not allowed? FITS 4.0: 3.3.2
+        return False
+    else:                                   # it's an extension and so marked
+        return ( (len(ff_hdus_list) > which_hdu) and
+                 (ff_hdus_list[which_hdu].header.get('XTENSION') in ['BINTABLE', 'TABLE']) )
+
+
+def has_image_data (ff_hdus_list, which_hdu=0):
+    """
+    Tell whether the given FITS file has image data the the given HDU
+    (defaults to the Primary HDU).
+    Assumes: an image extension HDU will be of type IMAGE.
+    NB: we currently recognize only primary HDU "images" with 2D axises.
+    """
+    if (which_hdu == 0):                    # heuristic for Primary HDU
+        if (ff_hdus_list[which_hdu].header.get('NAXIS') == 2):
+            return True
+        else:
+            return False
+    else:                                   # it's an extension and so marked
+        return ( (len(ff_hdus_list) > which_hdu) and
+                 (ff_hdus_list[which_hdu].header.get('XTENSION') == 'IMAGE') )
 
 
 def is_fits_file (fyl):
