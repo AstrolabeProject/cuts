@@ -1,6 +1,6 @@
 # Tests of the FITS specific utilities module.
 #   Written by: Tom Hicks. 4/7/2020.
-#   Last Modified: Sync with updated tests from imdtoolkit project.
+#   Last Modified: Replace bitpix_size test lost in sync.
 #
 import json
 import pytest
@@ -21,6 +21,12 @@ class TestFitsUtils(object):
     m13_tstfyl    = f"{TEST_RESOURCES_DIR}/m13.fits"
     mdkeys_tstfyl = f"{TEST_RESOURCES_DIR}/mdkeys.txt"
     table_tstfyl  = f"{TEST_RESOURCES_DIR}/small_table.fits"
+
+
+    def test_bitpix_size(self):
+        assert utils.bitpix_size(8) == 8
+        assert utils.bitpix_size("8") == 8
+
 
 
     def test_fits_file_exist(self):
