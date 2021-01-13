@@ -1,6 +1,6 @@
 # Tests for the file utilities module.
 #   Written by: Tom Hicks. 5/22/2020.
-#   Last Modified: Update for test resources change.
+#   Last Modified: Add test for gather_file_info.
 #
 import os
 from pathlib import Path
@@ -38,6 +38,14 @@ class TestFileUtils(object):
         assert utils.full_path(self.tmpPath) == self.tmpPath
         assert utils.full_path('/tmp/somefile') == '/tmp/somefile'
         assert utils.full_path('/tmp/somefile.py') == '/tmp/somefile.py'
+
+
+    def test_gather_file_info(self):
+        finfo = utils.gather_file_info(self.empty_tstfyl)
+        assert finfo is not None
+        assert finfo != {}
+        assert len(finfo) == 3
+        assert finfo.get('file_size') == 0
 
 
     def test_gen_file_paths(self):
