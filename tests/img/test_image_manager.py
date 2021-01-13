@@ -1,6 +1,6 @@
 # Tests for the image manager module.
 #   Written by: Tom Hicks. 1/9/2021.
-#   Last Modified: Add tests for return_image_at_path.
+#   Last Modified: Add tests for return_image_at_path. Begin tests for make_cutout.
 #
 import os
 import pytest
@@ -8,9 +8,12 @@ import pytest
 from flask import current_app, request, send_from_directory
 
 from astropy import units as u
+from astropy.io import fits
+from astropy.nddata import Cutout2D
 
 from cuts.blueprints.img.exceptions import ImageNotFound, RequestException, ServerError, NotYetImplemented
 from cuts.blueprints.img.image_manager import IRODS_ZONE_NAME, ImageManager
+from cuts.blueprints.img.arg_utils import parse_cutout_args
 from tests import TEST_RESOURCES_DIR, TEST_DBCONFIG_FILEPATH
 
 class TestImageManager(object):
@@ -33,9 +36,11 @@ class TestImageManager(object):
 
     retimg_emsg = "iRods connection capabilities not yet implemented."
 
+    # empty_tstfyl  = f"{TEST_RESOURCES_DIR}/empty.txt"
+    hh_tstfyl     = f"{TEST_RESOURCES_DIR}/HorseHead.fits"
+    m13_tstfyl    = f"{TEST_RESOURCES_DIR}/m13.fits"
+    # table_tstfyl  = f"{TEST_RESOURCES_DIR}/small_table.fits"
 
-    # hh_tstfyl = f"{TEST_RESOURCES_DIR}/HorseHead.fits"
-    # m13_tstfyl = f"{TEST_RESOURCES_DIR}/m13.fits"
 
     imgr = ImageManager(test_args)          # instance of class under tests
 
@@ -239,6 +244,24 @@ class TestImageManager(object):
         print(lst)
         assert lst is not None
         assert len(lst) == 0
+
+
+
+    def test_make_cutout(self, app):
+        with app.test_request_context('/'):
+            with fits.open(self.m13_tstfyl) as hdus:
+                hdu = hdus[0]
+                # wcs_info = wcs.WCS(hdus[0].header)
+                co_args = parse_cutout_args({'ra':'250.4226', 'dec':'36.4602', 'sizeArcSec':'10'}, required=True)
+                cout = self.imgr.make_cutout(hdus[0], co_args)
+                print(cout)
+                assert cout is not None
+                print(dir(cout))
+                assert isinstance(cout, Cutout2D) is True
+                print(f"original={cout.xmax_original}, {cout.ymax_original}")
+                print(f"cutout={cout.xmax_cutout}, {cout.ymax_cutout}")
+                assert cout.xmax_cutout < cout.xmax_original
+                assert cout.ymax_cutout < cout.ymax_original
 
 
 
