@@ -16,7 +16,6 @@ class TestTasks(object):
         args = {}
         with pytest.raises(RequestException, match=self.id_emsg) as reqex:
             resp = tasks.fetch_image(args)
-            print(resp)
 
 
     def test_img_fetch_badid(self, client):
@@ -25,7 +24,6 @@ class TestTasks(object):
         errmsg = self.id_nf_emsg.format('9999')
         with pytest.raises(ImageNotFound, match=errmsg) as reqex:
             resp = tasks.fetch_image(args)
-            print(resp)
 
 
     # def test_fetch_image_noid(self):

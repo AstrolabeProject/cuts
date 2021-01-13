@@ -1,6 +1,6 @@
 # Tests for the image manager module.
 #   Written by: Tom Hicks. 1/9/2021.
-#   Last Modified: Add tests for return_image_at_path. Begin tests for make_cutout.
+#   Last Modified: Add tests for several make cutout methods.
 #
 import os
 import pytest
@@ -12,7 +12,7 @@ from astropy.io import fits
 from astropy.nddata import Cutout2D
 
 from cuts.blueprints.img.exceptions import ImageNotFound, RequestException, ServerError, NotYetImplemented
-from cuts.blueprints.img.image_manager import IRODS_ZONE_NAME, ImageManager
+from cuts.blueprints.img.image_manager import DEFAULT_CUTOUTS_DIR, IRODS_ZONE_NAME, ImageManager
 from cuts.blueprints.img.arg_utils import parse_cutout_args
 from tests import TEST_RESOURCES_DIR, TEST_DBCONFIG_FILEPATH
 
@@ -34,12 +34,19 @@ class TestImageManager(object):
     dc19_size = 9
     dc20_size = 9
 
+    no_overlap_emsg = "There is no overlap between the reference image and the given center coordinate:.*"
     retimg_emsg = "iRods connection capabilities not yet implemented."
+    write_co_emsg = ".* Unexpected error while writing image cutout to cache file.*"
 
     # empty_tstfyl  = f"{TEST_RESOURCES_DIR}/empty.txt"
     hh_tstfyl     = f"{TEST_RESOURCES_DIR}/HorseHead.fits"
     m13_tstfyl    = f"{TEST_RESOURCES_DIR}/m13.fits"
     # table_tstfyl  = f"{TEST_RESOURCES_DIR}/small_table.fits"
+
+    m13_co_args = parse_cutout_args({'ra':'250.4226', 'dec':'36.4602', 'sizeArcSec':'12'},
+                                    required=True)
+    m13_co_filename = f"_m13__250.4226_36.4602_12.0arcsec.fits"
+
 
 
     imgr = ImageManager(test_args)          # instance of class under tests
@@ -54,6 +61,27 @@ class TestImageManager(object):
     def test_cleanup(self, client):
         self.imgr.cleanup()
         assert True                         # nothing to test at the moment
+
+
+
+    def test_get_cutout(self, app):
+        with app.test_request_context('/'):
+            assert self.imgr.is_cutout_cached(self.m13_co_filename) is False  # not cached
+            cout = self.imgr.get_cutout(self.m13_tstfyl, self.m13_co_args)
+            assert cout is not None
+            assert cout.status_code == 200
+            assert cout.is_streamed is True
+
+            print(os.listdir(DEFAULT_CUTOUTS_DIR))
+            assert self.imgr.is_cutout_cached(self.m13_co_filename) is True  # cached now
+
+            cout2 = self.imgr.get_cutout(self.m13_tstfyl, self.m13_co_args)  # get it again
+            assert cout2 is not None
+            assert cout2.status_code == 200
+            assert cout2.is_streamed is True
+
+            assert self.imgr.is_cutout_cached(self.m13_co_filename) is True  # still cached
+            os.remove(os.path.join(DEFAULT_CUTOUTS_DIR, self.m13_co_filename))  # cleanup
 
 
 
@@ -250,13 +278,9 @@ class TestImageManager(object):
     def test_make_cutout(self, app):
         with app.test_request_context('/'):
             with fits.open(self.m13_tstfyl) as hdus:
-                hdu = hdus[0]
-                # wcs_info = wcs.WCS(hdus[0].header)
-                co_args = parse_cutout_args({'ra':'250.4226', 'dec':'36.4602', 'sizeArcSec':'10'}, required=True)
-                cout = self.imgr.make_cutout(hdus[0], co_args)
+                cout = self.imgr.make_cutout(hdus[0], self.m13_co_args)
                 print(cout)
                 assert cout is not None
-                print(dir(cout))
                 assert isinstance(cout, Cutout2D) is True
                 print(f"original={cout.xmax_original}, {cout.ymax_original}")
                 print(f"cutout={cout.xmax_cutout}, {cout.ymax_cutout}")
@@ -265,60 +289,84 @@ class TestImageManager(object):
 
 
 
+    def test_make_cutout_and_save_m13(self, app):
+        with app.test_request_context('/'):
+            co_filename = "testMakeCutoutAndSave.fits"
+            assert self.imgr.is_cutout_cached(co_filename) is False    # not cached
+            self.imgr.make_cutout_and_save(self.m13_tstfyl, self.m13_co_args, co_filename)
+            print(os.listdir(DEFAULT_CUTOUTS_DIR))
+            assert self.imgr.is_cutout_cached(co_filename) is True     # cached now
+            os.remove(os.path.join(DEFAULT_CUTOUTS_DIR, co_filename))  # cleanup
+
+
+    def test_make_cutout_and_save_m13_no_overlap(self, app):
+        with app.test_request_context('/'):
+            disjoint_co_args = parse_cutout_args({'ra':'18.0', 'dec':'4.0', 'sizeArcSec':'10'},
+                                            required=True)
+            print(f"CO_ARGS={disjoint_co_args}")
+            co_filename = "shouldnotexist.fits"
+
+            assert self.imgr.is_cutout_cached(co_filename) is False  # not cached
+            with pytest.raises(RequestException, match=self.no_overlap_emsg) as reqex:
+                self.imgr.make_cutout_and_save(self.hh_tstfyl, disjoint_co_args, co_filename)
+            print(os.listdir(DEFAULT_CUTOUTS_DIR))
+            assert self.imgr.is_cutout_cached(co_filename) is False  # still not cached
+
+
+    def test_make_cutout_and_save_write_error(self, app):
+        with app.test_request_context('/'):
+            with pytest.raises(ServerError, match=self.write_co_emsg) as srverr:
+                self.imgr.make_cutout_and_save(self.m13_tstfyl, self.m13_co_args, 'nofile', '/NONE')
+
+
+
     def test_make_cutout_filename_min(self):
-        co_args = { 'ra': '250.4226', 'dec': '36.4602', 'size': '2.4', 'units': u.arcmin }
-        fname = self.imgr.make_cutout_filename(self.m13_path, co_args)
+        tst_args = { 'ra': '250.4226', 'dec': '36.4602', 'size': '2.4', 'units': u.arcmin }
+        fname = self.imgr.make_cutout_filename(self.m13_path, tst_args)
         print(fname)
         assert fname is not None
         assert fname == '_m13__250.4226_36.4602_2.4arcmin.fits'
 
 
     def test_make_cutout_filename_min2(self):
-        co_args = { 'ra': '53.157662568', 'dec': '-27.8075199236', 'size': '10', 'units': u.arcsec }
-        fname = self.imgr.make_cutout_filename(self.jades_path, co_args)
+        tst_args = { 'ra': '53.157662568', 'dec': '-27.8075199236', 'size': '10', 'units': u.arcsec }
+        fname = self.imgr.make_cutout_filename(self.jades_path, tst_args)
         print(fname)
         assert fname is not None
         assert fname == '_goods_s_F277W_2018_08_29__53.157662568_-27.8075199236_10arcsec.fits'
 
 
     def test_make_cutout_filename_min3(self):
-        co_args = { 'ra': '53.155277381023', 'dec': '-27.787295217953',
+        tst_args = { 'ra': '53.155277381023', 'dec': '-27.787295217953',
                     'size': '0.5', 'units': u.deg }
-        fname = self.imgr.make_cutout_filename(self.dc20_path, co_args)
+        fname = self.imgr.make_cutout_filename(self.dc20_path, tst_args)
         print(fname)
         assert fname is not None
         assert fname == '_F356W__53.155277381023_-27.787295217953_0.5deg.fits'
 
 
     def test_make_cutout_filename_coll(self):
-        co_args = { 'ra': '250.4226', 'dec': '36.4602', 'size': '2.4', 'units': u.arcmin }
-        fname = self.imgr.make_cutout_filename(self.m13_path, co_args, collection='JADES')
+        tst_args = { 'ra': '250.4226', 'dec': '36.4602', 'size': '2.4', 'units': u.arcmin }
+        fname = self.imgr.make_cutout_filename(self.m13_path, tst_args, collection='JADES')
         print(fname)
         assert fname is not None
         assert fname == 'JADES__m13__250.4226_36.4602_2.4arcmin.fits'
 
 
     def test_make_cutout_filename_filt(self):
-        co_args = { 'ra': '250.4226', 'dec': '36.4602', 'size': '2.4', 'units': u.arcmin }
-        fname = self.imgr.make_cutout_filename(self.m13_path, co_args, filt='AFILT')
+        tst_args = { 'ra': '250.4226', 'dec': '36.4602', 'size': '2.4', 'units': u.arcmin }
+        fname = self.imgr.make_cutout_filename(self.m13_path, tst_args, filt='AFILT')
         print(fname)
         assert fname is not None
         assert fname == 'AFILT__m13__250.4226_36.4602_2.4arcmin.fits'
 
 
     def test_make_cutout_filename_collNfilt(self):
-        co_args = { 'ra': '250.4226', 'dec': '36.4602', 'size': '2.4', 'units': u.arcmin }
-        fname = self.imgr.make_cutout_filename(self.m13_path, co_args, filt='AFILT', collection='JADES')
+        tst_args = { 'ra': '250.4226', 'dec': '36.4602', 'size': '2.4', 'units': u.arcmin }
+        fname = self.imgr.make_cutout_filename(self.m13_path, tst_args, filt='AFILT', collection='JADES')
         print(fname)
         assert fname is not None
         assert fname == 'JADES_AFILT__m13__250.4226_36.4602_2.4arcmin.fits'
-
-
-    def test_CUTOUT_METHODS(self):
-        co_dir = '/tmp'
-        co_filename = f"_m13__250.4226_36.4602_1arcsec.fits"
-        assert self.imgr.is_cutout_cached(co_filename, co_dir) is False
-
 
 
     def test_return_image_at_path_irods(self):
