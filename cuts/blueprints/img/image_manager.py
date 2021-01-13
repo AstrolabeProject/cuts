@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Add cutouts dir param to make_cutout_and_save.
+#   Last Modified: Correct iRods zone name constant.
 #
 import os
 import sys
@@ -30,7 +30,7 @@ DEFAULT_CUTOUTS_MODE = 'trim'
 DEFAULT_SELECT_FIELDS = [ 'id', 's_ra', 's_dec', 'file_name', 'file_path',
                           'filter', 'obs_collection' ]
 
-IRODS_ZONE_NAME = 'iplant'                    # TODO: pull from irods env file LATER
+IRODS_ZONE_NAME = '/iplant'                 # TODO: pull from irods env file LATER
 
 
 class ImageManager ():
