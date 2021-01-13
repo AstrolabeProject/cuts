@@ -1,13 +1,15 @@
 # Tests for the image manager module.
 #   Written by: Tom Hicks. 1/9/2021.
-#   Last Modified: Update for collection cleaning, extras to XTRAS.
+#   Last Modified: Add tests for return_image_at_path.
 #
 import os
 import pytest
 
+from flask import current_app, request, send_from_directory
+
 from astropy import units as u
 
-from cuts.blueprints.img.exceptions import ImageNotFound, RequestException, ServerError
+from cuts.blueprints.img.exceptions import ImageNotFound, RequestException, ServerError, NotYetImplemented
 from cuts.blueprints.img.image_manager import IRODS_ZONE_NAME, ImageManager
 from tests import TEST_RESOURCES_DIR, TEST_DBCONFIG_FILEPATH
 
@@ -23,10 +25,14 @@ class TestImageManager(object):
     dc19_path = '/vos/images/DC19/F090W.fits'
     dc20_path = '/vos/images/DC20/F356W.fits'
     jades_path = '/vos/images/JADES/goods_s_F277W_2018_08_29.fits'
+    irods_path = '/iplant/fake/nosuchfile.fits'
 
     jades_size = 9
     dc19_size = 9
     dc20_size = 9
+
+    retimg_emsg = "iRods connection capabilities not yet implemented."
+
 
     # hh_tstfyl = f"{TEST_RESOURCES_DIR}/HorseHead.fits"
     # m13_tstfyl = f"{TEST_RESOURCES_DIR}/m13.fits"
@@ -289,3 +295,20 @@ class TestImageManager(object):
         co_dir = '/tmp'
         co_filename = f"_m13__250.4226_36.4602_1arcsec.fits"
         assert self.imgr.is_cutout_cached(co_filename, co_dir) is False
+
+
+
+    def test_return_image_at_path_irods(self):
+        """ iRods connections are not yet implemented. """
+        with pytest.raises(NotYetImplemented, match=self.retimg_emsg) as nyi:
+            self.imgr.return_image_at_path(self.irods_path)
+
+
+    def test_return_image_at_path(self, app):
+        """ Return a small image from the test resources directory. """
+        with app.test_request_context('/'):
+            img = self.imgr.return_image_at_path(self.m13_path)
+            print(img)
+            assert img is not None
+            assert img.status_code == 200
+            assert img.is_streamed is True
