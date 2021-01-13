@@ -1,6 +1,6 @@
 # Tests for the PostgreSQL base class.
 #   Written by: Tom Hicks. 1/13/2021.
-#   Last Modified: Initial creation.
+#   Last Modified: Add more clean_id tests.
 #
 import pytest
 
@@ -59,15 +59,40 @@ class TestPostgreSQLBase(object):
     def test_clean_id_badargs(self):
         with pytest.raises(ServerError, match=self.cleanid_emsg):
             self.base.clean_id(None)
+
         with pytest.raises(ServerError, match=self.cleanid_emsg):
             self.base.clean_id('')
 
+        with pytest.raises(ServerError, match=self.cleanid_emsg):
+            self.base.clean_id('', '')
+
 
     def test_clean_id(self):
-        assert self.base.clean_id('a') == 'a'
         assert self.base.clean_id('abc') == 'abc'
+        assert self.base.clean_id('_') == '_'
+        assert self.base.clean_id('a') == 'a'
+        assert self.base.clean_id('_a_') == '_a_'
+        assert self.base.clean_id('_ABC_') == '_ABC_'
         assert self.base.clean_id('A_B_C') == 'A_B_C'
+        assert self.base.clean_id('abc_') == 'abc_'
+        assert self.base.clean_id('ABCxyz') == 'ABCxyz'
         assert self.base.clean_id('coll22') == 'coll22'
+
+
+    def test_clean_id_remove(self):
+        assert self.base.clean_id('ABC xyz') == 'ABCxyz'
+        assert self.base.clean_id('*ABC;xyz') == 'ABCxyz'
+        assert self.base.clean_id('*ABC;xyz') == 'ABCxyz'
+        assert self.base.clean_id('Robert;drop all tables;') == 'Robertdropalltables'
+
+
+    def test_clean_id_allow(self):
+        letvec = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']
+        assert self.base.clean_id('ABC xyz', letvec) == ''
+        assert self.base.clean_id('xyz; ABC', letvec) == ''
+        assert self.base.clean_id('abc xyz', letvec) == 'abc'
+        assert self.base.clean_id('XYZ; abc', letvec) == 'abc'
+        assert self.base.clean_id('Robert;drop all tables;', letvec) == 'bedaabe'
 
 
 
