@@ -48,7 +48,6 @@ class TestImageManager(object):
     m13_co_filename = f"_m13__250.4226_36.4602_12.0arcsec.fits"
 
 
-
     imgr = ImageManager(test_args)          # instance of class under tests
 
 
