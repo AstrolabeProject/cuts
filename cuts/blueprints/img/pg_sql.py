@@ -1,7 +1,7 @@
 #
-# Class to interact with a PostgreSQL database.
+# Class for app to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Allow schema name & md table name override in ctor args.
+#   Last Modified: Update/refactor for PG base class rename.
 #
 import sys
 
@@ -11,17 +11,17 @@ import psycopg2
 
 from config.settings import APP_NAME
 import cuts.blueprints.img.exceptions as exceptions
-from cuts.blueprints.img.i_sql import ISQLBase
+from cuts.blueprints.img.pg_sql_base import PostgreSQLBase
 
 
-class PostgreSQLManager (ISQLBase):
+class PostgreSQLManager (PostgreSQLBase):
 
     DEFAULT_QUERY_FIELDS = [ 'id', 'file_path' ]
 
 
     def __init__(self, args={}):
         """
-        Constructor for class to interact with a PostgreSQL database.
+        Constructor for class for app to interact with a PostgreSQL database.
         """
         super().__init__(args)
 
@@ -379,15 +379,3 @@ class PostgreSQLManager (ISQLBase):
             print(f"(query_coordinates): => {metadata}", file=sys.stderr)
 
         return metadata
-
-
-    def sql4_selected_fields (self, select=None):
-        """
-        Format the given list of field names to and return a string to select fields
-        in an SQL SELECT statement. Returns None is the given list is empty or None.
-        """
-        if (select is not None):
-            fields = ','.join([self.clean_id(fld) for fld in select])
-        else:
-            fields = '*'
-        return fields

@@ -1,7 +1,7 @@
 #
 # Base class for common methods to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Update for exception refactoring.
+#   Last Modified: Rename class.
 #
 import configparser
 import sys
@@ -19,9 +19,9 @@ from cuts.blueprints.img.misc_utils import keep_characters
 DB_ID_CHARS = set(ascii_letters + digits + '_')
 
 
-class ISQLBase ():
+class PostgreSQLBase ():
     """
-    Class defining common methods for managing data in an SQL database.
+    Class defining common methods for managing data in a PostgreSQL database.
     """
 
     def __init__ (self, args={}):
@@ -33,7 +33,7 @@ class ISQLBase ():
 
         # load the database configuration from a given or default file path
         dbconfig_file = args.get('dbconfig_file') or DEFAULT_DBCONFIG_FILEPATH
-        dbconfig = ISQLBase.load_sql_db_config(dbconfig_file)
+        dbconfig = PostgreSQLBase.load_sql_db_config(dbconfig_file)
         self.dbconfig = dbconfig
         self.db_uri = dbconfig.get('db_uri')
 
@@ -167,3 +167,15 @@ class ISQLBase ():
             conn.close()
 
         return rowdicts
+
+
+    def sql4_selected_fields (self, select=None):
+        """
+        Format the given list of field names to and return a string to select fields
+        in an SQL SELECT statement. Returns None is the given list is empty or None.
+        """
+        if (select is not None):
+            fields = ','.join([self.clean_id(fld) for fld in select])
+        else:
+            fields = '*'
+        return fields
