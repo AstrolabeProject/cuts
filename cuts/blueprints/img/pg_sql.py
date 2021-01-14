@@ -1,7 +1,7 @@
 #
 # Class for app to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Update/refactor for PG base class rename.
+#   Last Modified: Fix: query_cone, query_coordinates SQL construction and field selection.
 #
 import sys
 
@@ -145,7 +145,8 @@ class PostgreSQLManager (PostgreSQLBase):
 
     def list_catalog_tables (self, db_schema=None):
         """
-        List available image catalogs from the VOS database.
+        List available image catalogs from the VOS TAP database.
+        NB: Tables are added to the TAP database manually via the DALS addTableToTap script.
 
         :return a list of catalog names from the TAP schema "tables" table for the selected schema.
         """
@@ -286,11 +287,7 @@ class PostgreSQLManager (PostgreSQLBase):
         :return a list of metadata dictionaries for images which contain the specified point.
         """
         image_table = self.clean_table_name()
-
-        if (select is not None):
-            fields = ','.join([self.clean_id(fld) for fld in select])
-        else:
-            fields = '*'
+        fields = self.sql4_selected_fields(select=select)
 
         imgq = "SELECT {} FROM {}".format(fields, image_table)
         qargs = []                              # no query arguments yet
@@ -310,11 +307,11 @@ class PostgreSQLManager (PostgreSQLBase):
             imgq += " filter = (%s)"
             qargs.append(self.clean_id(filt))
 
-        if (where):
-            imgq += " AND" if where else " WHERE"
-            imgq += " q3c_radial_query(s_ra, s_dec, (%s), (%s), (%s)) = TRUE"
-            imgq += " ORDER BY id;"
-            qargs.extend([pt_ra, pt_dec, radius])
+        imgq += " AND" if where else " WHERE"
+        imgq += " q3c_radial_query(s_ra, s_dec, (%s), (%s), (%s))"
+        imgq += " ORDER BY id;"
+
+        qargs.extend([pt_ra, pt_dec, radius])
 
         if (self._DEBUG):
             print(f"(query_cone): query='{imgq}'", file=sys.stderr)
@@ -322,7 +319,7 @@ class PostgreSQLManager (PostgreSQLBase):
         metadata = self.fetch_rows_2dicts(imgq, qargs)
 
         if (self._DEBUG):
-            print(f"(query_cone): => {metadata}", file=sys.stderr)
+            print(f"(query_cone): len(metadata): {len(metadata)}", file=sys.stderr)
 
         return metadata
 
@@ -339,11 +336,7 @@ class PostgreSQLManager (PostgreSQLBase):
         :return a list of metadata dictionaries for images which contain the specified point.
         """
         image_table = self.clean_table_name()
-
-        if (select is not None):
-            fields = ','.join([self.clean_id(fld) for fld in select])
-        else:
-            fields = '*'
+        fields = self.sql4_selected_fields(select)
 
         imgq = "SELECT {} FROM {}".format(fields, image_table)
         qargs = []                              # no query arguments yet
@@ -363,12 +356,12 @@ class PostgreSQLManager (PostgreSQLBase):
             imgq += " filter = (%s)"
             qargs.append(self.clean_id(filt))
 
-        if (where):
-            imgq += " AND" if where else " WHERE"
-            imgq += " q3c_poly_query((%s), (%s),"
-            imgq += " ARRAY[im_ra1, im_dec1, im_ra2, im_dec2, im_ra3, im_dec3, im_ra4, im_dec4]) = TRUE"
-            imgq += " ORDER BY id;"
-            qargs.extend([pt_ra, pt_dec])
+        imgq += " AND" if where else " WHERE"
+        imgq += " q3c_poly_query((%s), (%s),"
+        imgq += " ARRAY[im_ra1, im_dec1, im_ra2, im_dec2, im_ra3, im_dec3, im_ra4, im_dec4]) = TRUE"
+        imgq += " ORDER BY id;"
+
+        qargs.extend([pt_ra, pt_dec])
 
         if (self._DEBUG):
             print(f"(query_coordinates): query='{imgq}'", file=sys.stderr)
@@ -376,6 +369,6 @@ class PostgreSQLManager (PostgreSQLBase):
         metadata = self.fetch_rows_2dicts(imgq, qargs)
 
         if (self._DEBUG):
-            print(f"(query_coordinates): => {metadata}", file=sys.stderr)
+            print(f"(query_coordinates): len(metadata): {len(metadata)}", file=sys.stderr)
 
         return metadata
