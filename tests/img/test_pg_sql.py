@@ -1,6 +1,6 @@
 # Tests for the PostgreSQL manager class.
 #   Written by: Tom Hicks. 1/13/2021.
-#   Last Modified: Add tests for query_cone.
+#   Last Modified: Add tests for query_coordinates.
 #
 import pytest
 
@@ -379,3 +379,73 @@ class TestPostgreSQLManager(object):
         assert len(lst) == 1
 
 
+
+    def test_query_coordinates_jades(self):
+        """ Basic query: JADES center point, no filter, no collection. """
+        lst = self.pgmgr.query_coordinates(53.16468333333, -27.78311111111)
+        assert lst is not None
+        print([ (md['id'], md['file_name'], md['obs_collection']) for md in lst])
+        assert len(lst) == self.jades_size + self.dc20_size
+
+
+    def test_query_coordinates_dc19(self):
+        """ Basic query: DC19 center point, no filter, no collection. """
+        lst = self.pgmgr.query_coordinates(53.157662568, -27.8075199236)
+        assert lst is not None
+        print([ (md['id'], md['file_name'], md['obs_collection']) for md in lst])
+        assert len(lst) == self.jades_size + self.dc19_size + self.dc20_size
+
+
+    def test_query_coordinates_dc20(self):
+        """ Basic query: DC20 center point, no filter, no collection. """
+        lst = self.pgmgr.query_coordinates(53.155277381023, -27.787295217953)
+        assert lst is not None
+        print([ (md['id'], md['file_name'], md['obs_collection']) for md in lst])
+        assert len(lst) == self.jades_size + self.dc19_size + self.dc20_size
+
+
+    def test_query_coordinates_badcoll(self):
+        """ Center point, no filter, bad collection. """
+        lst = self.pgmgr.query_coordinates(53.157662568, -27.8075199236, collection='BADcoll')
+        assert lst is not None
+        assert len(lst) == 0
+
+
+    def test_query_coordinates_badfilt(self):
+        """ Center point, bad filter, no collection. """
+        lst = self.pgmgr.query_coordinates(53.157662568, -27.8075199236, filt='BADfilt')
+        assert lst is not None
+        assert len(lst) == 0
+
+
+    def test_query_coordinates_badboth(self):
+        """ Center point, bad filter, bad collection. """
+        lst = self.pgmgr.query_coordinates(53.157662568, -27.8075199236,
+                                    filt='BADfilt', collection='BADcoll')
+        assert lst is not None
+        assert len(lst) == 0
+
+
+    def test_query_coordinates_coll(self):
+        """ Center point, no filter, good collection. """
+        lst = self.pgmgr.query_coordinates(53.157662568, -27.8075199236, collection='DC19')
+        assert lst is not None
+        print([ (md['id'], md['file_name'], md['obs_collection']) for md in lst])
+        assert len(lst) == self.dc19_size
+
+
+    def test_query_coordinates_filt(self):
+        """ Center point, good filter, no collection. """
+        lst = self.pgmgr.query_coordinates(53.157662568, -27.8075199236, filt='F277W')
+        assert lst is not None
+        print([ (md['id'], md['file_name'], md['obs_collection']) for md in lst])
+        assert len(lst) == 3
+
+
+    def test_query_coordinates_both(self):
+        """ Center point, good filter, good collection. """
+        lst = self.pgmgr.query_coordinates(53.157662568, -27.8075199236,
+                                    filt='F356W', collection='DC19')
+        assert lst is not None
+        print([ (md['id'], md['file_name'], md['obs_collection']) for md in lst])
+        assert len(lst) == 1
