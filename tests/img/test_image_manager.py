@@ -1,6 +1,6 @@
 # Tests for the image manager module.
 #   Written by: Tom Hicks. 1/9/2021.
-#   Last Modified: Add tests for several make cutout methods.
+#   Last Modified: Trivial resorting.
 #
 import os
 import pytest
@@ -184,6 +184,16 @@ class TestImageManager(object):
         assert len(res) == 0
 
 
+    def test_image_metadata_by_filter_goodcoll(self):
+        """ Valid filter. """
+        res = self.imgr.image_metadata_by_filter('F444W', collection='DC20')
+        print(res)
+        assert res is not None
+        assert len(res) == 1
+        assert res[0].get('filter') == 'F444W'
+        assert res[0].get('obs_collection') == 'DC20'
+
+
 
     def test_is_cutout_cached(self):
         assert self.imgr.is_cutout_cached('nosuch.fits', co_dir='/tmp') is False
@@ -195,17 +205,6 @@ class TestImageManager(object):
         assert self.imgr.is_irods_file('/not/an/iRods/filepath') is False
         assert self.imgr.is_irods_file(f"{IRODS_ZONE_NAME}/images/ok") is True
         assert self.imgr.is_irods_file(f"{IRODS_ZONE_NAME}/any/path/ok") is True
-
-
-
-    def test_image_metadata_by_filter_goodcoll(self):
-        """ Valid filter. """
-        res = self.imgr.image_metadata_by_filter('F444W', collection='DC20')
-        print(res)
-        assert res is not None
-        assert len(res) == 1
-        assert res[0].get('filter') == 'F444W'
-        assert res[0].get('obs_collection') == 'DC20'
 
 
 
