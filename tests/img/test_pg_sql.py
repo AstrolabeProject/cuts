@@ -1,6 +1,6 @@
 # Tests for the PostgreSQL manager class.
 #   Written by: Tom Hicks. 1/13/2021.
-#   Last Modified: Initial creation.
+#   Last Modified: Add tests for query_cone.
 #
 import pytest
 
@@ -306,5 +306,76 @@ class TestPostgreSQLManager(object):
         assert 'jwst' in lst
         assert 'tables' not in lst
 
+
+
+    def test_query_cone_1sec(self):
+        """ Basic query: center point, no filter, no collection. """
+        lst = self.pgmgr.query_cone(53.157662568, -27.8075199236, 0.00027777)
+        assert lst is not None
+        print([ (md['id'], md['file_name'], md['obs_collection']) for md in lst])
+        assert len(lst) == self.dc19_size
+
+
+    def test_query_cone_90sec(self):
+        """ Basic query: center point, no filter, no collection. """
+        lst = self.pgmgr.query_cone(53.157662568, -27.8075199236, 0.025)
+        assert lst is not None
+        print([ (md['id'], md['file_name'], md['obs_collection']) for md in lst])
+        assert len(lst) == self.dc19_size + self.dc20_size
+
+
+    def test_query_cone_2min(self):
+        """ Basic query: center point, no filter, no collection. """
+        lst = self.pgmgr.query_cone(53.157662568, -27.8075199236, 0.033333333)
+        assert lst is not None
+        print([ (md['id'], md['file_name'], md['obs_collection']) for md in lst])
+        assert len(lst) == self.jades_size + self.dc19_size + self.dc20_size
+
+
+    def test_query_cone_badcoll(self):
+        """ Center point, no filter, bad collection. """
+        lst = self.pgmgr.query_cone(53.157662568, -27.8075199236, 0.00027777, collection='BADcoll')
+        assert lst is not None
+        assert len(lst) == 0
+
+
+    def test_query_cone_badfilt(self):
+        """ Center point, bad filter, no collection. """
+        lst = self.pgmgr.query_cone(53.157662568, -27.8075199236, 0.00027777, filt='BADfilt')
+        assert lst is not None
+        assert len(lst) == 0
+
+
+    def test_query_cone_badboth(self):
+        """ Center point, bad filter, bad collection. """
+        lst = self.pgmgr.query_cone(53.157662568, -27.8075199236, 0.00027777,
+                                    filt='BADfilt', collection='BADcoll')
+        assert lst is not None
+        assert len(lst) == 0
+
+
+    def test_query_cone_coll(self):
+        """ Center point, no filter, good collection. """
+        lst = self.pgmgr.query_cone(53.157662568, -27.8075199236, 0.00027777, collection='DC19')
+        assert lst is not None
+        print([ (md['id'], md['file_name'], md['obs_collection']) for md in lst])
+        assert len(lst) == self.dc19_size
+
+
+    def test_query_cone_filt(self):
+        """ Center point, good filter, no collection. """
+        lst = self.pgmgr.query_cone(53.157662568, -27.8075199236, 0.00027777, filt='F277W')
+        assert lst is not None
+        print([ (md['id'], md['file_name'], md['obs_collection']) for md in lst])
+        assert len(lst) == 1
+
+
+    def test_query_cone_both(self):
+        """ Center point, good filter, good collection. """
+        lst = self.pgmgr.query_cone(53.157662568, -27.8075199236, 0.00027777,
+                                    filt='F356W', collection='DC19')
+        assert lst is not None
+        print([ (md['id'], md['file_name'], md['obs_collection']) for md in lst])
+        assert len(lst) == 1
 
 
