@@ -1,6 +1,6 @@
 # Tests for the PostgreSQL manager class.
 #   Written by: Tom Hicks. 1/13/2021.
-#   Last Modified: Add tests for query_coordinates.
+#   Last Modified: Add tests for query_image.
 #
 import pytest
 
@@ -448,4 +448,54 @@ class TestPostgreSQLManager(object):
                                     filt='F356W', collection='DC19')
         assert lst is not None
         print([ (md['id'], md['file_name'], md['obs_collection']) for md in lst])
+        assert len(lst) == 1
+
+
+
+    def test_query_image_noargs(self):
+        """ No filter, no collection. """
+        lst = self.pgmgr.query_image()
+        assert lst is not None
+        assert len(lst) == 0
+
+
+    def test_query_image_badcoll(self):
+        """ No filter, bad collection. """
+        lst = self.pgmgr.query_image(collection='BADcoll')
+        assert lst is not None
+        assert len(lst) == 0
+
+
+    def test_query_image_badfilt(self):
+        """ Bad filter, no collection. """
+        lst = self.pgmgr.query_image(filt='BADfilt')
+        assert lst is not None
+        assert len(lst) == 0
+
+
+    def test_query_image_badboth(self):
+        """ Bad filter, bad collection. """
+        lst = self.pgmgr.query_image(filt='BADfilt', collection='BADcoll')
+        assert lst is not None
+        assert len(lst) == 0
+
+
+    def test_query_image_coll(self):
+        """ No filter, good collection. """
+        lst = self.pgmgr.query_image(collection='DC20')
+        assert lst is not None
+        assert len(lst) == self.dc20_size
+
+
+    def test_query_image_filt(self):
+        """ Good filter, no collection. """
+        lst = self.pgmgr.query_image(filt='F115W')
+        assert lst is not None
+        assert len(lst) == 3
+
+
+    def test_query_image_both(self):
+        """ Good filter, good collection. """
+        lst = self.pgmgr.query_image(filt='F150W', collection='DC19')
+        assert lst is not None
         assert len(lst) == 1
