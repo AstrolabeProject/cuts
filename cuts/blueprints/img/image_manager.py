@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Fixup conditional include strings in get_image_or_cutout.
+#   Last Modified: Return image/data with highest ID.
 #
 import os
 import sys
@@ -66,7 +66,7 @@ class ImageManager ():
         """
         filtered = self.pgsql.image_metadata_by_query(collection=collection, filt=filt)
         if (filtered):
-            ipath = filtered[0].get('file_path')
+            ipath = filtered[-1].get('file_path')  # select last matching image
             return self.fetch_image_by_path(ipath, mimetype=mimetype)
         return None
 
@@ -104,7 +104,7 @@ class ImageManager ():
                 current_app.logger.error(errMsg)
                 raise exceptions.ImageNotFound(errMsg)
             else:                                              # found at least one matching image
-                image_path = image_matches[0].get('file_path') # select first matching image
+                image_path = image_matches[-1].get('file_path')  # select last matching image
                 return self.return_image_at_path(image_path)   # exit and return entire image
 
         else:                               # cutout size given, so make cutout
@@ -116,7 +116,7 @@ class ImageManager ():
                 current_app.logger.error(errMsg)
                 raise exceptions.ImageNotFound(errMsg)
             else:                           # else make, cache, and return cutout
-                image_path = image_matches[0].get('file_path') # select first matching image
+                image_path = image_matches[-1].get('file_path')  # select last matching image
                 return self.get_cutout(image_path, co_args, filt=filt, collection=collection)
 
 

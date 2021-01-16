@@ -1,7 +1,7 @@
 #
 # Class for app to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Remove redundant test for true value.
+#   Last Modified: Return image/data with highest ID.
 #
 import sys
 
@@ -65,7 +65,7 @@ class PostgreSQLManager (PostgreSQLBase):
 
         imgq = "SELECT {} FROM {} WHERE id = (%s)".format(fields, image_table)
         rows = self.fetch_rows_2dicts(imgq, [uid])
-        imd = rows[0] if rows else None
+        imd = rows[-1] if rows else None   # should be only one but, just in case, get last
 
         if (self._DEBUG):
             print("(image_metadata): => '{}'".format(imd), file=sys.stderr)
