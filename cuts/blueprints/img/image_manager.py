@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Correct iRods zone name constant.
+#   Last Modified: Fixup conditional include strings in get_image_or_cutout.
 #
 import os
 import sys
@@ -98,9 +98,9 @@ class ImageManager ():
         if (not co_args.get('co_size')):    # if no size specified, return the entire image
             image_matches = self.query_coordinates(co_args, filt=filt, collection=collection)
             if (not image_matches):
-                coll = f"in collection '{collection}'" if (collection) else ''
-                fltr = f"with filter '{filt}'" if (filt) else ''
-                errMsg = f"No matching image for coordinates {fltr} {coll} was found"
+                coll = f" in collection '{collection}'" if (collection) else ''
+                fltr = f" with filter '{filt}'" if (filt) else ''
+                errMsg = f"No matching image for coordinates{fltr}{coll} was found"
                 current_app.logger.error(errMsg)
                 raise exceptions.ImageNotFound(errMsg)
             else:                                              # found at least one matching image
@@ -110,9 +110,9 @@ class ImageManager ():
         else:                               # cutout size given, so make cutout
             image_matches = self.query_cone(co_args, filt=filt, collection=collection)
             if (not image_matches):
-                coll = f"in collection '{collection}'" if (collection) else ''
-                fltr = f"with filter '{filt}'" if (filt) else ''
-                errMsg = f"No matching image for coordinates (in cone) {fltr} {coll} was found"
+                coll = f" in collection '{collection}'" if (collection) else ''
+                fltr = f" with filter '{filt}'" if (filt) else ''
+                errMsg = f"No matching image for coordinates (in cone){fltr}{coll} was found"
                 current_app.logger.error(errMsg)
                 raise exceptions.ImageNotFound(errMsg)
             else:                           # else make, cache, and return cutout
