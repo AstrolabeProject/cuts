@@ -1,6 +1,6 @@
 # Tests for the misc utilities module.
 #   Written by: Tom Hicks. 5/22/2020.
-#   Last Modified: Port to Cuts.
+#   Last Modified: Add tests of product.
 #
 import string
 
@@ -120,6 +120,14 @@ class TestMiscUtils(object):
         assert 'aa' in miss
         assert 'bb' in miss
         assert 'ccc' in miss
+
+
+    def test_product(self):
+        assert mutils.product([]) == 1
+        assert mutils.product([1]) == 1
+        assert mutils.product([2]) == 2
+        assert mutils.product([2, 2]) == 4
+        assert mutils.product([1, 2, 3, 4, 5]) == 120
 
 
     def test_remove_entries_default(self):
