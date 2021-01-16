@@ -1,7 +1,7 @@
 #
 # Class for app to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Fix: query_cone, query_coordinates SQL construction and field selection.
+#   Last Modified: Add query_image method.
 #
 import sys
 
@@ -370,5 +370,52 @@ class PostgreSQLManager (PostgreSQLBase):
 
         if (self._DEBUG):
             print(f"(query_coordinates): len(metadata): {len(metadata)}", file=sys.stderr)
+
+        return metadata
+
+
+    def query_image (self, collection=None, filt=None, select=None):
+        """
+        List metadata for images which meet the given filter and/or collection criteria
+
+        :param collection: if specified, restrict the listing to the named image collection.
+        :param filt: if specified, restrict the listing to images with the named filter.
+        :param select: an optional list of fields to be returned in the query (default ALL fields).
+
+        :return a list of metadata dictionaries for images which meet the query criteria.
+        """
+        if (collection is None and (filt is None)):  # sanity check
+            return []
+
+        image_table = self.clean_table_name()
+        fields = self.sql4_selected_fields(select=select)
+
+        imgq = "SELECT {} FROM {}".format(fields, image_table)
+        qargs = []                              # no query arguments yet
+
+        where = False
+        if (collection is not None):            # add collection argument to query
+            imgq += " WHERE obs_collection = (%s)"
+            qargs.append(self.clean_id(collection))
+            where = True
+
+        if (filt is not None):
+            if (where):
+                imgq += " AND"
+            else:
+                imgq += " WHERE"
+                where = True
+            imgq += " filter = (%s)"
+            qargs.append(self.clean_id(filt))
+
+        imgq += " ORDER BY id;"
+
+        if (self._DEBUG):
+            print(f"(query_image): query='{imgq}'", file=sys.stderr)
+
+        metadata = self.fetch_rows_2dicts(imgq, qargs)
+
+        if (self._DEBUG):
+            print(f"(query_cone): len(metadata): {len(metadata)}", file=sys.stderr)
 
         return metadata

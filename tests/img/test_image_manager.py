@@ -1,6 +1,6 @@
 # Tests for the image manager module.
 #   Written by: Tom Hicks. 1/9/2021.
-#   Last Modified: Trivial resorting.
+#   Last Modified: Add tests for fetch_image_by_filter and query_* methods.
 #
 import os
 import pytest
@@ -38,10 +38,11 @@ class TestImageManager(object):
     retimg_emsg = "iRods connection capabilities not yet implemented."
     write_co_emsg = ".* Unexpected error while writing image cutout to cache file.*"
 
-    # empty_tstfyl  = f"{TEST_RESOURCES_DIR}/empty.txt"
-    hh_tstfyl     = f"{TEST_RESOURCES_DIR}/HorseHead.fits"
-    m13_tstfyl    = f"{TEST_RESOURCES_DIR}/m13.fits"
-    # table_tstfyl  = f"{TEST_RESOURCES_DIR}/small_table.fits"
+    hh_tstfyl = f"{TEST_RESOURCES_DIR}/HorseHead.fits"
+    hh_filter = 'OG590'
+    m13_tstfyl = f"{TEST_RESOURCES_DIR}/m13.fits"
+    # empty_tstfyl = f"{TEST_RESOURCES_DIR}/empty.txt"
+    # table_tstfyl = f"{TEST_RESOURCES_DIR}/small_table.fits"
 
     m13_co_args = parse_cutout_args({'ra':'250.4226', 'dec':'36.4602', 'sizeArcSec':'12'},
                                     required=True)
@@ -60,6 +61,49 @@ class TestImageManager(object):
     def test_cleanup(self, client):
         self.imgr.cleanup()
         assert True                         # nothing to test at the moment
+
+
+
+    def test_fetch_image_by_filter_badfilt(self, app):
+        """
+        Bad filter. Also tests image_metadata_by_query.
+        """
+        with app.test_request_context('/'):
+            img = self.imgr.fetch_image_by_filter('BADfilt')
+            assert img is None
+
+
+    def test_fetch_image_by_filter_badcoll(self, app):
+        """
+        Bad collection. Also tests image_metadata_by_query.
+        """
+        with app.test_request_context('/'):
+            img = self.imgr.fetch_image_by_filter(self.hh_filter, collection='BADcoll')
+            assert img is None
+
+
+    def test_fetch_image_by_filter(self, app):
+        """
+        Fetch a small image from the test resources directory by filter.
+        Also tests fetch_image_by_path and image_metadata_by_query.
+        """
+        with app.test_request_context('/'):
+            img = self.imgr.fetch_image_by_filter(self.hh_filter)
+            assert img is not None
+            assert img.status_code == 200
+            assert img.is_streamed is True
+
+
+    def test_fetch_image_by_filter_both(self, app):
+        """
+        Fetch a small image from the test resources directory by filter and collection.
+        Also tests fetch_image_by_path and image_metadata_by_query.
+        """
+        with app.test_request_context('/'):
+            img = self.imgr.fetch_image_by_filter(self.hh_filter, collection='TEST')
+            assert img is not None
+            assert img.status_code == 200
+            assert img.is_streamed is True
 
 
 
@@ -365,6 +409,161 @@ class TestImageManager(object):
         print(fname)
         assert fname is not None
         assert fname == 'JADES_AFILT__m13__250.4226_36.4602_2.4arcmin.fits'
+
+
+
+    def test_query_cone(self):
+        tst_args = { 'ra': '250.4226', 'dec': '36.4602', 'size': '0.002777' }
+        lst = self.imgr.query_cone(tst_args, collection='BADcoll')
+        assert lst is not None
+        assert lst == []
+
+    def test_query_cone_badcoll(self):
+        """ Center point, no filter, bad collection. """
+        tst_args = { 'ra': '53.157662568', 'dec': '-27.8075199236', 'size': '0.0002777' }
+        lst = self.imgr.query_cone(tst_args, collection='BADcoll')
+        assert lst is not None
+        assert len(lst) == 0
+
+
+    def test_query_cone_badfilt(self):
+        """ Center point, bad filter, no collection. """
+        tst_args = { 'ra': '53.157662568', 'dec': '-27.8075199236', 'size': '0.0002777' }
+        lst = self.imgr.query_cone(tst_args, filt='BADfilt')
+        assert lst is not None
+        assert len(lst) == 0
+
+
+    def test_query_cone_badboth(self):
+        """ Center point, bad filter, bad collection. """
+        tst_args = { 'ra': '53.157662568', 'dec': '-27.8075199236', 'size': '0.0002777' }
+        lst = self.imgr.query_cone(tst_args, filt='BADfilt', collection='BADcoll')
+        assert lst is not None
+        assert len(lst) == 0
+
+
+    def test_query_cone_coll(self):
+        """ Center point, no filter, good collection. """
+        tst_args = { 'ra': '53.155277381023', 'dec': '-27.787295217953', 'size': '0.0002777' }
+        lst = self.imgr.query_cone(tst_args, collection='DC20')
+        assert lst is not None
+        print([ (md['id'], md['file_name'], md['obs_collection']) for md in lst])
+        assert len(lst) == self.dc19_size
+
+
+    def test_query_cone_filt(self):
+        """ Center point, good filter, no collection. """
+        tst_args = { 'ra': '53.155277381023', 'dec': '-27.787295217953', 'size': '0.0002777' }
+        lst = self.imgr.query_cone(tst_args, filt='F277W')
+        assert lst is not None
+        print([ (md['id'], md['file_name'], md['obs_collection']) for md in lst])
+        assert len(lst) == 1
+
+
+    def test_query_cone_both(self):
+        """ Center point, good filter, good collection. """
+        tst_args = { 'ra': '53.155277381023', 'dec': '-27.787295217953', 'size': '0.0002777' }
+        lst = self.imgr.query_cone(tst_args, filt='F356W', collection='DC20')
+        assert lst is not None
+        print([ (md['id'], md['file_name'], md['obs_collection']) for md in lst])
+        assert len(lst) == 1
+
+
+
+    def test_query_coordinates_badcoll(self):
+        """ No filter, bad collection. """
+        tst_args = { 'ra': '53.155277381023', 'dec': '-27.787295217953' }
+        lst = self.imgr.query_coordinates(tst_args, collection='BADcoll')
+        assert lst is not None
+        assert lst == []
+
+
+    def test_query_coordinates_badfilt(self):
+        """ No collection, bad filter. """
+        tst_args = { 'ra': '53.155277381023', 'dec': '-27.787295217953' }
+        lst = self.imgr.query_coordinates(tst_args, filt='BADfilt')
+        assert lst is not None
+        assert lst == []
+
+
+    def test_query_coordinates(self):
+        """ Basic query: DC20 center point, no filter, no collection. """
+        tst_args = { 'ra': '53.155277381023', 'dec': '-27.787295217953' }
+        lst = self.imgr.query_coordinates(tst_args)
+        assert lst is not None
+        print([ (md['id'], md['file_name'], md['obs_collection']) for md in lst])
+        assert len(lst) == self.jades_size + self.dc19_size + self.dc20_size
+
+
+    def test_query_coordinates_coll(self):
+        """ Center point, no filter, good collection. """
+        tst_args = { 'ra': '53.155277381023', 'dec': '-27.787295217953' }
+        lst = self.imgr.query_coordinates(tst_args, collection='DC20')
+        assert lst is not None
+        print([ (md['id'], md['file_name'], md['obs_collection']) for md in lst])
+        assert len(lst) == self.dc20_size
+
+
+    def test_query_coordinates_filt(self):
+        """ Center point, good filter, no collection. """
+        tst_args = { 'ra': '53.155277381023', 'dec': '-27.787295217953' }
+        lst = self.imgr.query_coordinates(tst_args, filt='F090W')
+        assert lst is not None
+        print([ (md['id'], md['file_name'], md['obs_collection']) for md in lst])
+        assert len(lst) == 3
+
+
+    def test_query_coordinates_both(self):
+        """ Center point, good filter, good collection. """
+        tst_args = { 'ra': '53.157662568', 'dec': '-27.8075199236' }
+        lst = self.imgr.query_coordinates(tst_args, collection='DC19', filt='F200W')
+        assert lst is not None
+        print([ (md['id'], md['file_name'], md['obs_collection']) for md in lst])
+        assert len(lst) == 1
+
+
+
+    def test_query_image_noargs(self):
+        """ No filter, no collection. """
+        lst = self.imgr.query_image()
+        assert lst is not None
+        assert lst == []
+
+
+    def test_query_image_badcoll(self):
+        """ No filter, bad collection. """
+        lst = self.imgr.query_image(collection='BADcoll')
+        assert lst is not None
+        assert lst == []
+
+
+    def test_query_image_badfilt(self):
+        """ Bad filter, no collection. """
+        lst = self.imgr.query_image(filt='BADfilt')
+        assert lst is not None
+        assert lst == []
+
+
+    def test_query_image_coll(self):
+        """ No filter, good collection. """
+        lst = self.imgr.query_image(collection='JADES')
+        assert lst is not None
+        assert len(lst) == self.jades_size
+
+
+    def test_query_image_filt(self):
+        """ Good filter, no collection. """
+        lst = self.imgr.query_image(filt='F335M')
+        assert lst is not None
+        assert len(lst) == 3
+
+
+    def test_query_image_both(self):
+        """ Good filter, good collection. """
+        lst = self.imgr.query_image(filt='F335M', collection='DC19')
+        assert lst is not None
+        assert len(lst) == 1
+
 
 
     def test_return_image_at_path_irods(self):
