@@ -1,7 +1,7 @@
 #
 # Class for app to interact with a PostgreSQL database.
 #   Written by: Tom Hicks. 12/2/2020.
-#   Last Modified: Add query_image method.
+#   Last Modified: Remove redundant test for true value.
 #
 import sys
 
@@ -358,7 +358,7 @@ class PostgreSQLManager (PostgreSQLBase):
 
         imgq += " AND" if where else " WHERE"
         imgq += " q3c_poly_query((%s), (%s),"
-        imgq += " ARRAY[im_ra1, im_dec1, im_ra2, im_dec2, im_ra3, im_dec3, im_ra4, im_dec4]) = TRUE"
+        imgq += " ARRAY[im_ra1, im_dec1, im_ra2, im_dec2, im_ra3, im_dec3, im_ra4, im_dec4])"
         imgq += " ORDER BY id;"
 
         qargs.extend([pt_ra, pt_dec])
