@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Return image/data with highest ID.
+#   Last Modified: Rename default cache dir. Fix comparison warning.
 #
 import os
 import sys
@@ -24,7 +24,7 @@ from cuts.blueprints.img.fits_utils import fits_file_exists, FITS_MIME_TYPE
 from cuts.blueprints.img.pg_sql import PostgreSQLManager
 
 
-DEFAULT_CUTOUTS_DIR = '/vos/cutouts'
+DEFAULT_CO_CACHE_DIR = '/vos/cutouts'
 DEFAULT_CUTOUTS_MODE = 'trim'
 
 DEFAULT_SELECT_FIELDS = [ 'id', 's_ra', 's_dec', 'file_name', 'file_path',
@@ -95,7 +95,7 @@ class ImageManager ():
         Return an entire image or a cutout, based on the given cutout arguments and
         optional collection and filter arguments.
         """
-        if (not co_args.get('co_size')):    # if no size specified, return the entire image
+        if (co_args.get('co_size') is None):  # if no size specified, return the entire image
             image_matches = self.query_coordinates(co_args, filt=filt, collection=collection)
             if (not image_matches):
                 coll = f" in collection '{collection}'" if (collection) else ''
@@ -156,7 +156,7 @@ class ImageManager ():
         return self.pgsql.image_metadata_by_query(filt=filt, collection=collection)
 
 
-    def is_cutout_cached (self, co_filename, co_dir=DEFAULT_CUTOUTS_DIR):
+    def is_cutout_cached (self, co_filename, co_dir=DEFAULT_CO_CACHE_DIR):
         """
         Tell whether the given cutout filename exists in the given (or default)
         cutouts directory or not.
@@ -177,7 +177,7 @@ class ImageManager ():
         return colls
 
 
-    def list_cutouts (self, co_dir=DEFAULT_CUTOUTS_DIR):
+    def list_cutouts (self, co_dir=DEFAULT_CO_CACHE_DIR):
         """
         Return a list of image cutout filenames from the given (or default)
         cutouts cache directory.
@@ -226,7 +226,7 @@ class ImageManager ():
         return cutout
 
 
-    def make_cutout_and_save (self, ipath, co_args, co_filename, co_dir=DEFAULT_CUTOUTS_DIR):
+    def make_cutout_and_save (self, ipath, co_args, co_filename, co_dir=DEFAULT_CO_CACHE_DIR):
         """
         Cut out a section of the image at the given image path, using the specifications
         in the given cutout arguments, then save it in the cutout cache directory with
@@ -296,7 +296,7 @@ class ImageManager ():
         return self.pgsql.query_image(collection=collection, filt=filt, select=select)
 
 
-    def return_cutout_with_name (self, co_filename, co_dir=DEFAULT_CUTOUTS_DIR, mimetype=FITS_MIME_TYPE):
+    def return_cutout_with_name (self, co_filename, co_dir=DEFAULT_CO_CACHE_DIR, mimetype=FITS_MIME_TYPE):
         """ Return the named cutout file, giving it the specified MIME type. """
         if (self.is_cutout_cached(co_filename)):
             return send_from_directory(co_dir, co_filename, mimetype=mimetype,
@@ -331,7 +331,7 @@ class ImageManager ():
             return self.return_image_at_filepath(ipath, mimetype=mimetype)
 
 
-    def write_cutout (self, hdu, co_filename, co_dir=DEFAULT_CUTOUTS_DIR, overwrite=True):
+    def write_cutout (self, hdu, co_filename, co_dir=DEFAULT_CO_CACHE_DIR, overwrite=True):
         """
         Write the contents of the given HDU to the named file in the given (or default)
         cutouts directory.
