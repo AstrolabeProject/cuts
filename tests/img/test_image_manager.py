@@ -1,6 +1,7 @@
 # Tests for the image manager module.
 #   Written by: Tom Hicks. 1/9/2021.
-#   Last Modified: Add tests for fetch_image_by_filter and query_* methods.
+#   Last Modified: Add tests of get_image_or_cutout. Fetch images from test resources only.
+#                  Rename default cache dir. Add/use cleancache method.
 #
 import os
 import pytest
@@ -12,7 +13,7 @@ from astropy.io import fits
 from astropy.nddata import Cutout2D
 
 from cuts.blueprints.img.exceptions import ImageNotFound, RequestException, ServerError, NotYetImplemented
-from cuts.blueprints.img.image_manager import DEFAULT_CUTOUTS_DIR, IRODS_ZONE_NAME, ImageManager
+from cuts.blueprints.img.image_manager import DEFAULT_CO_CACHE_DIR, IRODS_ZONE_NAME, ImageManager
 from cuts.blueprints.img.arg_utils import parse_cutout_args
 from tests import TEST_RESOURCES_DIR, TEST_DBCONFIG_FILEPATH
 
@@ -34,9 +35,11 @@ class TestImageManager(object):
     dc19_size = 9
     dc20_size = 9
 
+    no_coords_emsg = "No matching image for coordinates was found"
+    no_coords_cone_emsg = "No matching image for coordinates \\(in cone\\) was found"
     no_overlap_emsg = "There is no overlap between the reference image and the given center coordinate:.*"
     retimg_emsg = "iRods connection capabilities not yet implemented."
-    write_co_emsg = ".* Unexpected error while writing image cutout to cache file.*"
+    write_co_emsg = "Unexpected error while writing image cutout to cache file"
 
     hh_tstfyl = f"{TEST_RESOURCES_DIR}/HorseHead.fits"
     hh_filter = 'OG590'
@@ -52,10 +55,14 @@ class TestImageManager(object):
     imgr = ImageManager(test_args)          # instance of class under tests
 
 
+    def cleancache(self):
+        for fyl in os.listdir(DEFAULT_CO_CACHE_DIR):
+            os.remove(os.path.join(DEFAULT_CO_CACHE_DIR, fyl))
+
+
     def test_setup_app (self, app):
         " Create an instance of the app: should be executed only once by conftest.py. "
         assert app is not None
-
 
 
     def test_cleanup(self, client):
@@ -115,7 +122,7 @@ class TestImageManager(object):
             assert cout.status_code == 200
             assert cout.is_streamed is True
 
-            print(os.listdir(DEFAULT_CUTOUTS_DIR))
+            print(os.listdir(DEFAULT_CO_CACHE_DIR))
             assert self.imgr.is_cutout_cached(self.m13_co_filename) is True  # cached now
 
             cout2 = self.imgr.get_cutout(self.m13_tstfyl, self.m13_co_args)  # get it again
@@ -124,7 +131,59 @@ class TestImageManager(object):
             assert cout2.is_streamed is True
 
             assert self.imgr.is_cutout_cached(self.m13_co_filename) is True  # still cached
-            os.remove(os.path.join(DEFAULT_CUTOUTS_DIR, self.m13_co_filename))  # cleanup
+            self.cleancache()
+
+
+
+    def test_get_image_or_cutout_nomatch(self, app):
+        """ No matching point, no filter, no collection, no size. """
+        with app.test_request_context('/'):
+            tst_args = { 'ra': '102.0', 'dec': '10.2' }
+            with pytest.raises(ImageNotFound, match=self.no_coords_emsg) as reqex:
+                cout = self.imgr.get_image_or_cutout(tst_args)
+
+
+    def test_get_image_or_cutout_nosize(self, app):
+        """ Whole image: m13 center point, no filter, no collection. """
+        with app.test_request_context('/'):
+            tst_args = { 'ra': '250.4226', 'dec': '36.4602' }
+            cout = self.imgr.get_image_or_cutout(tst_args)
+            assert cout.status_code == 200
+            assert cout.is_streamed is True
+
+
+    def test_get_image_or_cutout_size_nomatch(self, app):
+        """ Cutout: size but no matching point, no filter, no collection. """
+        with app.test_request_context('/'):
+            tst_args = parse_cutout_args({'ra': '102.0', 'dec': '10.2', 'sizeArcSec':'2'},
+                                         required=True)
+            with pytest.raises(ImageNotFound, match=self.no_coords_cone_emsg) as reqex:
+                cout = self.imgr.get_image_or_cutout(tst_args)
+
+
+    def test_get_image_or_cutout_size(self, app):
+        """ Cutout: m13 center point, no filter, no collection. """
+        with app.test_request_context('/'):
+            cout = self.imgr.get_image_or_cutout(self.m13_co_args)
+            assert cout.status_code == 200
+            assert cout.is_streamed is True
+
+
+    def test_get_image_or_cutout_nosize_coll(self, app):
+        """ Whole image: m13 center point, no filter, good collection. """
+        with app.test_request_context('/'):
+            tst_args = { 'ra': '250.4226', 'dec': '36.4602' }
+            cout = self.imgr.get_image_or_cutout(tst_args, collection='TEST')
+            assert cout.status_code == 200
+            assert cout.is_streamed is True
+
+
+    def test_get_image_or_cutout_size(self, app):
+        """ Cutout: m13 center point, no filter, good collection. """
+        with app.test_request_context('/'):
+            cout = self.imgr.get_image_or_cutout(self.m13_co_args, collection='TEST')
+            assert cout.status_code == 200
+            assert cout.is_streamed is True
 
 
 
@@ -336,9 +395,9 @@ class TestImageManager(object):
             co_filename = "testMakeCutoutAndSave.fits"
             assert self.imgr.is_cutout_cached(co_filename) is False    # not cached
             self.imgr.make_cutout_and_save(self.m13_tstfyl, self.m13_co_args, co_filename)
-            print(os.listdir(DEFAULT_CUTOUTS_DIR))
+            print(os.listdir(DEFAULT_CO_CACHE_DIR))
             assert self.imgr.is_cutout_cached(co_filename) is True     # cached now
-            os.remove(os.path.join(DEFAULT_CUTOUTS_DIR, co_filename))  # cleanup
+            self.cleancache()
 
 
     def test_make_cutout_and_save_m13_no_overlap(self, app):
@@ -351,7 +410,7 @@ class TestImageManager(object):
             assert self.imgr.is_cutout_cached(co_filename) is False  # not cached
             with pytest.raises(RequestException, match=self.no_overlap_emsg) as reqex:
                 self.imgr.make_cutout_and_save(self.hh_tstfyl, disjoint_co_args, co_filename)
-            print(os.listdir(DEFAULT_CUTOUTS_DIR))
+            print(os.listdir(DEFAULT_CO_CACHE_DIR))
             assert self.imgr.is_cutout_cached(co_filename) is False  # still not cached
 
 
@@ -575,7 +634,8 @@ class TestImageManager(object):
     def test_return_image_at_path(self, app):
         """ Return a small image from the test resources directory. """
         with app.test_request_context('/'):
-            img = self.imgr.return_image_at_path(self.m13_path)
+            # NB: using image in test directory, not images directory:
+            img = self.imgr.return_image_at_path(self.m13_tstfyl)
             print(img)
             assert img is not None
             assert img.status_code == 200
