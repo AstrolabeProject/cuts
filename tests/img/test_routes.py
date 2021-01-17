@@ -1,47 +1,55 @@
+# Tests for the image manager module.
+#   Written by: Tom Hicks. 12/28/2020.
+#   Last Modified: Add tests for list_*, query_coordinates, query_image methods.
+#
 import os
 import pytest
 
+from flask import request, jsonify
+
+from cuts.blueprints.img import tasks
 from cuts.blueprints.img.exceptions import ImageNotFound, RequestException, ServerError
+from cuts.blueprints.img.fits_utils import FITS_MIME_TYPE
+from cuts.blueprints.img.image_manager import ImageManager
+from tests import TEST_RESOURCES_DIR, TEST_DBCONFIG_FILEPATH
+
 
 class TestRoutes(object):
 
-    id_emsg = "A record ID must be specified"
-    id_nf_emsg = "Image with image ID '{0}' not found in database"
-    filt_emsg = "An image filter must be specified"
-    filt_nf_emsg = "Image with filter '{0}' {1} not found in database"
-    filt_coll_nf_emsg = "Image with filter '{0}' and collection '{1}' not found in database"
-    coll_emsg = "A collection name must be specified, via the 'collection' argument"
-    path_emsg = "A valid image path must be specified, via the 'path' argument"
-    path_nf_emsg = "Specified image file '{}' not found"
-    md_id_nf_emsg = "Image metadata for image ID '{0}' not found in database"
     co_fyl_emsg = "A cached filename must be specified, via the 'filename' argument"
     co_nf_emsg = "Cached image cutout file '{0}' not found in cutouts cache directory"
-    size_emsg = "A radius size (one of 'radius', 'sizeDeg', 'sizeArcMin', or 'sizeArcSec') must be specified."
-    size_convert_emsg = "Error trying to convert the given size specification to a number."
-    ra_emsg = "Right ascension must be specified, via the 'ra' argument"
-    ra_convert_emsg = "Error trying to convert the specified RA to a number."
-    dec_emsg = "Declination must be specified, via the 'dec' argument"
+    coll_emsg = "A collection name must be specified, via the 'collection' argument"
     dec_convert_emsg = "Error trying to convert the specified DEC to a number."
+    dec_emsg = "Declination must be specified, via the 'dec' argument"
+    filt_coll_nf_emsg = "Image with filter '{0}' and collection '{1}' not found in database"
+    filt_emsg = "An image filter must be specified"
+    filt_nf_emsg = "Image with filter '{0}' {1} not found in database"
+    id_emsg = "A record ID must be specified"
+    id_nf_emsg = "Image with image ID '{0}' not found in database"
+    md_id_nf_emsg = "Image metadata for image ID '{0}' not found in database"
+    no_coords_filt_emsg = "No matching image for coordinates (in cone) with filter '{}' was found"
+    path_emsg = "A valid image path must be specified, via the 'path' argument"
+    path_nf_emsg = "Specified image file '{}' not found"
+    ra_convert_emsg = "Error trying to convert the specified RA to a number."
+    ra_emsg = "Right ascension must be specified, via the 'ra' argument"
+    size_convert_emsg = "Error trying to convert the given size specification to a number."
+    size_emsg = "A radius size (one of 'radius', 'sizeDeg', 'sizeArcMin', or 'sizeArcSec') must be specified."
 
+    m13_path = '/vos/images/XTRAS/m13.fits'
+    dc19_path = '/vos/images/DC19/F090W.fits'
+    dc20_path = '/vos/images/DC20/F356W.fits'
 
-    # def dump_exception (self, xcpt):
-    #     # xcpt is an instance of pytest.ExceptionInfo
-    #     print(f"XCPT={xcpt}")
-    #     print(f"XCPT.type={xcpt.type}")
-    #     print(f"XCPT.typename={xcpt.typename}")
-    #     print(f"XCPT.value={str(xcpt.value)}")
-    #     # print(f"dir(XCPT)={dir(xcpt)}")
+    jades_size = 9
+    dc19_size = 9
+    dc20_size = 9
 
-    # def test_xray_response(self, client):
-    #     emsg="Image with image ID .* not found"
-    #     rv = client.get('/img/fetch?id=9999')
-    #     print(f"dir(RV)={dir(rv)}")
-    #     print(f"RV={rv}")
-    #     print(f"type(RV)={type(rv)}")
-    #     print(f"RV.status={rv.status}")
-    #     print(f"RV.status_code={rv.status_code}")
-    #     print(f"RV.data={str(rv.data,encoding='UTF-8')}")
-    #     assert False
+    test_args = {
+        'debug': True,
+        'dbconfig_file': TEST_DBCONFIG_FILEPATH
+    }
+
+    # The following overrides the image manager in the tasks module for testing purposes
+    tasks.imgr = ImageManager(test_args)  # image manager for tests
 
 
     def test_img_fetch_noid(self, client):
@@ -336,6 +344,43 @@ class TestRoutes(object):
 
 
 
+    def test_list_collections(self, client):
+        resp = client.get("/img/list_collections")
+        assert resp is not None
+        assert resp.status_code == 200
+        assert resp.data is not None
+        jdata = resp.get_json()
+        print(jdata)
+        assert 'DC19' in jdata
+        assert 'DC20' in jdata
+        assert 'JADES' in jdata
+
+
+    def test_list_filters(self, client):
+        resp = client.get("/img/list_filters")
+        assert resp is not None
+        assert resp.status_code == 200
+        assert resp.data is not None
+        jdata = resp.get_json()
+        print(jdata)
+        assert 'F090W' in jdata
+        assert 'F335M' in jdata
+        assert 'F444W' in jdata
+
+
+    def test_list_image_paths(self, client):
+        resp = client.get("/img/list_image_paths")
+        assert resp is not None
+        assert resp.status_code == 200
+        assert resp.data is not None
+        jdata = resp.get_json()
+        print(jdata)
+        assert self.m13_path in jdata
+        assert self.dc19_path in jdata
+        assert self.dc20_path in jdata
+
+
+
     def test_query_cone_noargs(self, client):
         """ No CO arguments, size or coordinates, given. """
         resp = client.get(f"/img/query_cone")
@@ -469,6 +514,21 @@ class TestRoutes(object):
 
 
 
+    def test_query_coordinates(self, client):
+        resp = client.get("/img/query_coordinates?ra=53.155277381023&dec=-27.787295217953")
+        assert resp is not None
+        assert resp.status_code == 200
+        assert resp.data is not None
+        jdata = resp.get_json()
+        print(jdata)
+        print([ (md['id'], md['file_name'], md['obs_collection']) for md in jdata])
+        assert len(jdata) == self.jades_size + self.dc19_size + self.dc20_size
+        assert 'id' in jdata[0]
+        assert 'file_name' in jdata[0]
+        assert 'file_path' in jdata[0]
+
+
+
     def test_co_list(self, client):
         resp = client.get("/co/list")
         print(resp)
@@ -476,6 +536,70 @@ class TestRoutes(object):
         assert resp.status_code == 200
         assert resp.data is not None
         assert '[]' in str(resp.data)
+
+
+
+    def test_query_image_coll(self, client):
+        """ No filter, good collection. """
+        resp = client.get("/img/query_image?collection=JADES")
+        assert resp is not None
+        assert resp.status_code == 200
+        assert resp.data is not None
+        jdata = resp.get_json()
+        print(jdata)
+        assert len(jdata) == self.jades_size
+
+
+    def test_query_image_filt(self, client):
+        """ Good filter, no collection. """
+        resp = client.get("/img/query_image?filter=F335M")
+        assert resp is not None
+        assert resp.status_code == 200
+        assert resp.data is not None
+        jdata = resp.get_json()
+        assert len(jdata) == 3
+
+
+    def test_query_image_both(self, client):
+        """ Good filter, good collection. """
+        resp = client.get("/img/query_image?collection=JADES&filter=F090W")
+        assert resp is not None
+        assert resp.status_code == 200
+        assert resp.data is not None
+        jdata = resp.get_json()
+        assert len(jdata) == 1
+
+
+
+    def test_co_cutout(self, client):
+        """ Cutout: m13 center point, no filter, no collection. """
+        resp = client.get("/co/cutout?ra=250.4226&dec=36.4602&sizeArcSec=12")
+        assert resp is not None
+        assert resp.status_code == 200
+        assert resp.mimetype == FITS_MIME_TYPE
+        assert resp.data is not None
+
+
+
+    def test_co_cutout_by_filter_badfilt(self, client):
+        """ Cutout: m13 center point, bad filter, no collection. """
+        resp = client.get("/co/cutout_by_filter?ra=250.4226&dec=36.4602&sizeArcSec=12&filter=BADfilt")
+        assert resp is not None
+        assert resp.status_code == ImageNotFound.ERROR_CODE
+        resp_msg = str(resp.data, encoding='UTF-8') or ''
+        print(resp_msg)
+        errmsg = self.no_coords_filt_emsg.format('BADfilt')
+        assert errmsg in resp_msg
+
+
+    # TODO: IMPLEMENT LATER: need file with filter which allows cutouts
+    # def test_co_cutout_by_filter(self, client):
+    #     """ Cutout: m13 center point, by filter, no collection. """
+    #     resp = client.get("/co/cutout_by_filter?ra=250.4226&dec=36.4602&sizeArcSec=12&filter=NULL")
+    #     assert resp is not None
+    #     assert resp.status_code == 200
+    #     assert resp.mimetype == FITS_MIME_TYPE
+    #     assert resp.data is not None
 
 
 
