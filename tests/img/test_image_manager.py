@@ -1,7 +1,6 @@
 # Tests for the image manager module.
 #   Written by: Tom Hicks. 1/9/2021.
-#   Last Modified: Add tests of get_image_or_cutout. Fetch images from test resources only.
-#                  Rename default cache dir. Add/use cleancache method.
+#   Last Modified: Add test for good get_image_or_cutout.
 #
 import os
 import pytest
@@ -44,9 +43,9 @@ class TestImageManager(object):
     hh_tstfyl = f"{TEST_RESOURCES_DIR}/HorseHead.fits"
     hh_filter = 'OG590'
     m13_tstfyl = f"{TEST_RESOURCES_DIR}/m13.fits"
-    # empty_tstfyl = f"{TEST_RESOURCES_DIR}/empty.txt"
-    # table_tstfyl = f"{TEST_RESOURCES_DIR}/small_table.fits"
 
+    hh_co_args = parse_cutout_args({'ra':'85.27497', 'dec':'-2.458265',
+                                    'sizeDeg':'4'}, required=True)
     m13_co_args = parse_cutout_args({'ra':'250.4226', 'dec':'36.4602', 'sizeArcSec':'12'},
                                     required=True)
     m13_co_filename = f"_m13__250.4226_36.4602_12.0arcsec.fits"
@@ -178,10 +177,19 @@ class TestImageManager(object):
             assert cout.is_streamed is True
 
 
-    def test_get_image_or_cutout_size(self, app):
+    def test_get_image_or_cutout_size_coll(self, app):
         """ Cutout: m13 center point, no filter, good collection. """
         with app.test_request_context('/'):
             cout = self.imgr.get_image_or_cutout(self.m13_co_args, collection='TEST')
+            assert cout.status_code == 200
+            assert cout.is_streamed is True
+
+
+    def test_get_image_or_cutout_size_filt(self, app):
+        """ Cutout: HorseHead center point, good filter, no collection. """
+        with app.test_request_context('/'):
+            cout = self.imgr.get_image_or_cutout(self.hh_co_args, filt=self.hh_filter,
+                                                 collection='TEST')
             assert cout.status_code == 200
             assert cout.is_streamed is True
 
