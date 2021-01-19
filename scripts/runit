@@ -1,0 +1,14 @@
+#!/bin/bash
+#
+# Shell script to run pipelines from inside the imdtk Docker file
+# using the tools it contains. This script should be mounted by
+# the container and runs within its environment.
+#
+
+# echo "ARGS=$*"
+
+echo "Current PWD (in container) = $PWD"
+echo "Contents of script directory:"
+ls -lF /cuts/scripts
+
+# echo "============================================"
