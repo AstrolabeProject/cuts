@@ -1,14 +1,16 @@
 # Tests for the image manager module.
 #   Written by: Tom Hicks. 12/28/2020.
-#   Last Modified: Add tests for list_*, query_coordinates, query_image methods.
+#   Last Modified: Add test for good co_cutout_by_filter. Add tests for error handlers.
 #
 import os
 import pytest
 
 from flask import request, jsonify
 
+from cuts.blueprints.img import routes
 from cuts.blueprints.img import tasks
 from cuts.blueprints.img.exceptions import ImageNotFound, RequestException, ServerError
+from cuts.blueprints.img.exceptions import ProcessingError, UnsupportedType
 from cuts.blueprints.img.fits_utils import FITS_MIME_TYPE
 from cuts.blueprints.img.image_manager import ImageManager
 from tests import TEST_RESOURCES_DIR, TEST_DBCONFIG_FILEPATH
@@ -592,14 +594,13 @@ class TestRoutes(object):
         assert errmsg in resp_msg
 
 
-    # TODO: IMPLEMENT LATER: need file with filter which allows cutouts
-    # def test_co_cutout_by_filter(self, client):
-    #     """ Cutout: m13 center point, by filter, no collection. """
-    #     resp = client.get("/co/cutout_by_filter?ra=250.4226&dec=36.4602&sizeArcSec=12&filter=NULL")
-    #     assert resp is not None
-    #     assert resp.status_code == 200
-    #     assert resp.mimetype == FITS_MIME_TYPE
-    #     assert resp.data is not None
+    def test_co_cutout_by_filter(self, client):
+        """ Cutout: HorseHead center point, by filter, no collection. """
+        resp = client.get("/co/cutout_by_filter?ra=85.27497&dec=-2.458265&sizeArcSec=12&filter=OG590")
+        assert resp is not None
+        assert resp.status_code == 200
+        assert resp.mimetype == FITS_MIME_TYPE
+        assert resp.data is not None
 
 
 
@@ -657,3 +658,39 @@ class TestRoutes(object):
         respstr = str(resp.data)
         assert '"arg1":"1"' in respstr
         assert '"arg2":"other"' in respstr
+
+
+
+    def test_handle_processing_error(self):
+        errMsg = 'Test ProcessingError'
+        tup = routes.handle_processing_error(ProcessingError(errMsg))
+        assert tup[0] == errMsg
+        assert tup[1] == ProcessingError.ERROR_CODE
+
+
+    def test_handle_image_not_found(self):
+        errMsg = 'Test ImageNotFound'
+        tup = routes.handle_processing_error(ImageNotFound(errMsg))
+        assert tup[0] == errMsg
+        assert tup[1] == ImageNotFound.ERROR_CODE
+
+
+    def test_handle_request_exception(self):
+        errMsg = 'Test RequestException'
+        tup = routes.handle_processing_error(RequestException(errMsg))
+        assert tup[0] == errMsg
+        assert tup[1] == RequestException.ERROR_CODE
+
+
+    def test_handle_server_error(self):
+        errMsg = 'Test ServerError'
+        tup = routes.handle_server_error(ServerError(errMsg))
+        assert tup[0] == errMsg
+        assert tup[1] == ServerError.ERROR_CODE
+
+
+    def test_handle_unsupported_type(self):
+        errMsg = 'Test UnsupportedType'
+        tup = routes.handle_unsupported_type(UnsupportedType(errMsg))
+        assert tup[0] == errMsg
+        assert tup[1] == UnsupportedType.ERROR_CODE
