@@ -1,0 +1,15 @@
+# In dksql:
+delete from jtest;
+alter SEQUENCE jtest_id_seq RESTART;
+
+# From imdtk:
+mmd_pgsql_pipe -tn jtest -idir /vos/images/JADES -c JADES -v
+mmd_pgsql_pipe -tn jtest -idir /vos/images/DC19 -c DC19 -v
+mmd_pgsql_pipe -tn jtest -idir /vos/images/DC20 -c DC20 -v
+mmd_pgsql_pipe -tn jtest -idir /vos/images/XTRAS -c XTRAS -v
+mmd_pgsql_pipe -tn jtest -idir /vos/images/XTRAS -c TEST -v
+
+# In dksql:
+update jtest set file_path = '/cuts/tests/resources/HorseHead.fits' where id = 30;
+update jtest set file_path = '/cuts/tests/resources/m13.fits' where id = 31;
+
