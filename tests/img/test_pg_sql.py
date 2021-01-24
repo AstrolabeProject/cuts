@@ -1,6 +1,6 @@
 # Tests for the PostgreSQL manager class.
 #   Written by: Tom Hicks. 1/13/2021.
-#   Last Modified: Add tests for query_image.
+#   Last Modified: Use sia_table_size as minimum only.
 #
 import pytest
 
@@ -230,7 +230,7 @@ class TestPostgreSQLManager(object):
         lst = self.pgmgr.list_catalog_tables()
         print(lst)
         assert lst is not None
-        assert len(lst) == self.sia_tables_size
+        assert len(lst) >= self.sia_tables_size
         assert 'sia.eazy' in lst
         assert 'sia.jtest' in lst
         assert 'sia.jwst' in lst
@@ -300,7 +300,7 @@ class TestPostgreSQLManager(object):
         lst = self.pgmgr.list_table_names()
         print(lst)
         assert lst is not None
-        assert len(lst) == self.sia_tables_size
+        assert len(lst) >= self.sia_tables_size
         assert 'eazy' in lst
         assert 'jtest' in lst
         assert 'jwst' in lst
