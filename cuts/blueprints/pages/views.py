@@ -16,6 +16,11 @@ def about():
     return render_template('pages/about.html')
 
 
+@pages.route('/api')
+def api():
+    return render_template('pages/api.html')
+
+
 @pages.route('/license')
 def license():
     return render_template('pages/license.html')
