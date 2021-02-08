@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "version": "1.0.0",
-    "title": "Cuts API",
-    "description": "An API to return hello in requested language"
+    "version": "1.0.1",
+    "title": "Cuts Application Programming Interface (API) documentation",
+    "description": "Main API for the Astrolabe Image and Cutout Server (CUTS)"
   },
   "paths": {
     "/echo": {

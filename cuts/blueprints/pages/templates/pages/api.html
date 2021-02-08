@@ -1,35 +1,30 @@
-<!-- HTML for static distribution bundle build -->
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <title>Swagger UI</title>
+{% extends 'layouts/base.html' %}
+
+{% block title %}Cuts API{% endblock %}
+{% block meta_description %}Cuts - API documentation.{% endblock %}
+
+{% block head %}
     <link rel="stylesheet" type="text/css"
           href="{{ url_for('static', filename='styles/swagger-ui.css') }}" >
     <style>
-      html
-      {
+      html {
         box-sizing: border-box;
         overflow: -moz-scrollbars-vertical;
         overflow-y: scroll;
       }
 
-      *,
-      *:before,
-      *:after
-      {
+      *, *:before, *:after {
         box-sizing: inherit;
       }
 
-      body
-      {
+      body {
         margin:0;
         background: #fafafa;
       }
     </style>
-  </head>
+{% endblock %}
 
-  <body>
+{% block body %}
     <div id="swagger-ui"></div>
 
     <script src="{{ url_for('static', filename='scripts/swagger-ui-bundle.js') }}"
@@ -57,5 +52,4 @@
       window.ui = ui
     }
   </script>
-  </body>
-</html>
+{% endblock %}
