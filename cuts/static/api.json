@@ -2,10 +2,68 @@
   "openapi": "3.0.0",
   "info": {
     "version": "1.0.1",
-    "title": "Cuts Application Programming Interface (API) documentation",
-    "description": "Main API for the Astrolabe Image and Cutout Server (CUTS)"
+    "title": "Astrolabe Image & Cutout Server (CUTS) API documentation",
+    "description": "Main API for the Astrolabe Image and Cutout Server (CUTS)",
+    "contact": {
+      "email": "hickst@arizona.edu"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
   },
+  "tags": [
+    {
+      "name": "users",
+      "description": "Operations available to regular users"
+    },
+    {
+      "name": "admins",
+      "description": "Secured Admin-only calls"
+    }
+  ],
   "paths": {
+    "/img/fetch": {
+      "get": {
+        "tags": [ "users" ],
+        "summary": "Fetch a specific image by record id",
+        "description": "Fetch the entire image whose metadata record has the given id.\n",
+        "operationId": "fetch_image",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Record number (id) for record to be fetched.",
+            "required": true,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer",
+              "format": "int"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "search results matching criteria",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InventoryItem"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "bad input parameter"
+          }
+        }
+      },
+    },
     "/echo": {
       "get": {
         "tags": [
