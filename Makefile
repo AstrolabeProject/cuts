@@ -1,5 +1,5 @@
 APP_ROOT=/cuts
-CONIMGS=/vos/images
+CONIMGS=/usr/local/data/vos/images
 CONSCRIPTS=${APP_ROOT}/scripts
 ENVLOC=/etc/trhenv
 EP=/bin/bash

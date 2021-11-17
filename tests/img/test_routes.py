@@ -1,6 +1,6 @@
 # Tests for the image manager module.
 #   Written by: Tom Hicks. 12/28/2020.
-#   Last Modified: Add test for good co_cutout_by_filter. Add tests for error handlers.
+#   Last Modified: Update for moving VOS data to /usr/local/data.
 #
 import os
 import pytest
@@ -13,7 +13,7 @@ from cuts.blueprints.img.exceptions import ImageNotFound, RequestException, Serv
 from cuts.blueprints.img.exceptions import ProcessingError, UnsupportedType
 from cuts.blueprints.img.fits_utils import FITS_MIME_TYPE
 from cuts.blueprints.img.image_manager import ImageManager
-from tests import TEST_RESOURCES_DIR, TEST_DBCONFIG_FILEPATH
+from tests import TEST_RESOURCES_DIR, TEST_DBCONFIG_FILEPATH, VOS
 
 
 class TestRoutes(object):
@@ -37,9 +37,9 @@ class TestRoutes(object):
     size_convert_emsg = "Error trying to convert the given size specification to a number."
     size_emsg = "A radius size (one of 'radius', 'sizeDeg', 'sizeArcMin', or 'sizeArcSec') must be specified."
 
-    m13_path = '/vos/images/XTRAS/m13.fits'
-    dc19_path = '/vos/images/DC19/F090W.fits'
-    dc20_path = '/vos/images/DC20/F356W.fits'
+    m13_path =  f"{VOS}/images/XTRAS/m13.fits"
+    dc19_path = f"{VOS}/images/DC19/F090W.fits"
+    dc20_path = f"{VOS}/images/DC20/F356W.fits"
 
     jades_size = 9
     dc19_size = 9
@@ -323,7 +323,7 @@ class TestRoutes(object):
 
     def test_img_metadata_by_path_badcoll(self, client):
         """ Valid filter value but no such collection value. """
-        path = '/vos/images/DC20/F090W.fits'
+        path = f"{VOS}/images/DC20/F090W.fits"
         coll = 'BADColl'
         resp = client.get(f"/img/metadata_by_path?path={path}&collection={coll}")
         print(resp)

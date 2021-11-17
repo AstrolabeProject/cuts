@@ -35,7 +35,7 @@ services:
     environment:
       PYTHONUNBUFFERED: 'true'
     volumes:
-      - './images:/vos/images:ro'
+      - ./images:/usr/local/data/vos/images:ro
     ports:
       - '8000:8000'
     networks:

@@ -24,7 +24,7 @@ from cuts.blueprints.img.fits_utils import fits_file_exists, FITS_MIME_TYPE
 from cuts.blueprints.img.pg_sql import PostgreSQLManager
 
 
-DEFAULT_CO_CACHE_DIR = '/vos/cutouts'
+DEFAULT_CO_CACHE_DIR = '/usr/local/data/vos/cutouts'
 DEFAULT_CUTOUTS_MODE = 'trim'
 
 DEFAULT_SELECT_FIELDS = [ 'id', 's_ra', 's_dec', 'file_name', 'file_path',
