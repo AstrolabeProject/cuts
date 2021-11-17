@@ -33,9 +33,9 @@ SQL_FIELDS_HYBRID = [ 's_dec', 's_ra', 'obs_collection', 'is_public' ]
 #
 # Celery worker service
 #
-CELERY_BROKER_URL = 'redis://:devpassword@vos_redis:6379/0'
-CELERY_RESULT_BACKEND = 'redis://:devpassword@vos_redis:6379/0'
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_REDIS_MAX_CONNECTIONS = 5
+CELERY_BROKER_URL = 'redis://:devpassword@vos-redis-1:6379/0'
+result_backend = 'redis://:devpassword@vos-redis-1:6379/0'
+accept_content = ['json']
+task_serializer = 'json'
+result_serializer = 'json'
+redis_max_connections = 5
