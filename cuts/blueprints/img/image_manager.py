@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Rename default cache dir. Fix comparison warning.
+#   Last Modified: Load data root from config settings.
 #
 import os
 import sys
@@ -18,13 +18,13 @@ from astropy.nddata import Cutout2D
 from astropy.nddata.utils import NoOverlapError, PartialOverlapError
 from astropy.wcs import WCS
 
-from config.settings import DEBUG
+from config.settings import DEBUG, DATA_ROOT
 import cuts.blueprints.img.exceptions as exceptions
 from cuts.blueprints.img.fits_utils import fits_file_exists, FITS_MIME_TYPE
 from cuts.blueprints.img.pg_sql import PostgreSQLManager
 
 
-DEFAULT_CO_CACHE_DIR = '/usr/local/data/vos/cutouts'
+DEFAULT_CO_CACHE_DIR = f"{DATA_ROOT}/cutouts"
 DEFAULT_CUTOUTS_MODE = 'trim'
 
 DEFAULT_SELECT_FIELDS = [ 'id', 's_ra', 's_dec', 'file_name', 'file_path',

@@ -1,21 +1,21 @@
 # Tests for the PostgreSQL manager class.
 #   Written by: Tom Hicks. 1/13/2021.
-#   Last Modified: Update for moving VOS data to /usr/local/data.
+#   Last Modified: Load data root from test config settings.
 #
 import pytest
 
 from cuts.blueprints.img.exceptions import ImageNotFound, RequestException, ServerError, NotYetImplemented
 from cuts.blueprints.img.pg_sql import PostgreSQLManager
-from tests import TEST_RESOURCES_DIR, TEST_DBCONFIG_FILEPATH, VOS
+from tests import TEST_RESOURCES_DIR, TEST_DBCONFIG_FILEPATH, TEST_DATA_ROOT
 
 
 class TestPostgreSQLManager(object):
 
     bad_path = '/bad/path'
-    m13_path = f"{VOS}/images/XTRAS/m13.fits"
-    dc19_path = f"{VOS}/images/DC19/F090W.fits"
-    dc20_path = f"{VOS}/images/DC20/F356W.fits"
-    jades_path = f"{VOS}/images/JADES/goods_s_F277W_2018_08_29.fits"
+    m13_path = f"{TEST_DATA_ROOT}/images/XTRAS/m13.fits"
+    dc19_path = f"{TEST_DATA_ROOT}/images/DC19/F090W.fits"
+    dc20_path = f"{TEST_DATA_ROOT}/images/DC20/F356W.fits"
+    jades_path = f"{TEST_DATA_ROOT}/images/JADES/goods_s_F277W_2018_08_29.fits"
     irods_path = '/iplant/fake/nosuchfile.fits'
 
     dc19_size = 9
@@ -77,7 +77,7 @@ class TestPostgreSQLManager(object):
         path = self.pgmgr.image_path_from_id(uid=1)
         print(path)
         assert path is not None
-        assert path.startswith(f"{VOS}/images/JADES")
+        assert path.startswith(f"{TEST_DATA_ROOT}/images/JADES")
 
 
 

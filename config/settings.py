@@ -17,6 +17,9 @@ APP_ROOT = "/{}".format(APP_NAME)
 # Configuration directory, inside the application
 CONFIG_DIR = "{}/config".format(APP_ROOT)
 
+# Root directory for the data directory tree.
+DATA_ROOT = '/usr/local/data/vos'
+
 # Default config file for database configuration.
 DEFAULT_DBCONFIG_FILEPATH = "{}/jwst-dbconfig.ini".format(CONFIG_DIR)
 

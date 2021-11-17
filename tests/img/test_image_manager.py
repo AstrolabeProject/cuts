@@ -1,6 +1,6 @@
 # Tests for the image manager module.
 #   Written by: Tom Hicks. 1/9/2021.
-#   Last Modified: Update for moving VOS data to /usr/local/data.
+#   Last Modified: Load data root from test config settings.
 #
 import os
 import pytest
@@ -14,7 +14,7 @@ from astropy.nddata import Cutout2D
 from cuts.blueprints.img.exceptions import ImageNotFound, RequestException, ServerError, NotYetImplemented
 from cuts.blueprints.img.image_manager import DEFAULT_CO_CACHE_DIR, IRODS_ZONE_NAME, ImageManager
 from cuts.blueprints.img.arg_utils import parse_cutout_args
-from tests import TEST_RESOURCES_DIR, TEST_DBCONFIG_FILEPATH, VOS
+from tests import TEST_RESOURCES_DIR, TEST_DBCONFIG_FILEPATH, TEST_DATA_ROOT
 
 class TestImageManager(object):
 
@@ -24,10 +24,10 @@ class TestImageManager(object):
     }
 
     bad_path = '/bad/path'
-    m13_path = f"{VOS}/images/XTRAS/m13.fits"
-    dc19_path = f"{VOS}/images/DC19/F090W.fits"
-    dc20_path = f"{VOS}/images/DC20/F356W.fits"
-    jades_path = f"{VOS}/images/JADES/goods_s_F277W_2018_08_29.fits"
+    m13_path = f"{TEST_DATA_ROOT}/images/XTRAS/m13.fits"
+    dc19_path = f"{TEST_DATA_ROOT}/images/DC19/F090W.fits"
+    dc20_path = f"{TEST_DATA_ROOT}/images/DC20/F356W.fits"
+    jades_path = f"{TEST_DATA_ROOT}/images/JADES/goods_s_F277W_2018_08_29.fits"
     irods_path = '/iplant/fake/nosuchfile.fits'
 
     jades_size = 9

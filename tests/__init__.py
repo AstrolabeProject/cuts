@@ -1,10 +1,10 @@
 import os
 
-from config.settings import APP_ROOT
+from config.settings import APP_ROOT, DATA_ROOT
 
 TEST_DIR = None
 TEST_DBCONFIG_FILEPATH = None
-VOS = '/usr/local/data/vos'
+TEST_DATA_ROOT = DATA_ROOT
 
 if (os.environ.get('RUNNING_IN_CONTAINER') is not None):
     TEST_DIR = f"{APP_ROOT}/tests"
