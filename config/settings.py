@@ -33,8 +33,8 @@ SQL_FIELDS_HYBRID = [ 's_dec', 's_ra', 'obs_collection', 'is_public' ]
 #
 # Celery worker service
 #
-CELERY_BROKER_URL = 'redis://:devpassword@vos-redis-1:6379/0'
-result_backend = 'redis://:devpassword@vos-redis-1:6379/0'
+CELERY_BROKER_URL = 'redis://:devpassword@redis:6379/0'
+result_backend = 'redis://:devpassword@redis:6379/0'
 accept_content = ['json']
 task_serializer = 'json'
 result_serializer = 'json'
