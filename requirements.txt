@@ -1,28 +1,28 @@
-Flask==1.1.2
+Flask==2.0.2
 
 # may need to specify exact version to avoid bugs/conflicts
 # previous: werkzeug==0.16.1
-werkzeug==1.0.1
+werkzeug==2.0.2
 
 # Application server for both development and production.
-gunicorn==20.0.4
-gevent==21.1.2
-greenlet==1.0.0
+gunicorn==20.1.0
+gevent==21.8.0
+greenlet==1.1.2
 
 # Data and workers.
-redis==3.5.3
-celery==5.0.5
+redis==4.0.0
+celery==5.2.1
 
 # astrocut==0.7
-astropy==4.2
-numpy==1.19.5
+astropy==4.3.1
+numpy==1.21.4
 
 # Database
-psycopg2-binary==2.8.6
+psycopg2-binary==2.9.2
 
 # Testing
-pytest==6.2.1
-pytest-cov==2.11.1
+pytest==6.2.5
+pytest-cov==3.0.0
 
 # Extensions
 flask-debugtoolbar==0.11.0
