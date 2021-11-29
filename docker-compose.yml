@@ -1,12 +1,10 @@
-version: '3.7'
+version: '3.9'
 
 services:
   redis:
-    image: redis:5.0.14-alpine
+    image: redis:6.2.6-alpine
     command: redis-server --requirepass devpassword
-    deploy:
-      restart_policy:
-        condition: none
+    restart: "no"
     volumes:
       - redis:/data
     networks:
@@ -18,9 +16,7 @@ services:
   celery:
     image: astrolabe/cuts
     command: celery -A cuts.blueprints.img.tasks worker -l debug
-    deploy:
-      restart_policy:
-        condition: none
+    restart: "no"
     networks:
       - vos_net
     depends_on:
@@ -29,9 +25,7 @@ services:
 
   cuts:
     image: astrolabe/cuts
-    deploy:
-      restart_policy:
-        condition: none
+    restart: "no"
     environment:
       PYTHONUNBUFFERED: 'true'
     volumes:

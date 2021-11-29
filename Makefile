@@ -11,14 +11,14 @@ PORT=8000
 PROG=Cuts
 SCRIPTS=${PWD}/scripts
 SHELL=/bin/bash
-STACK=vos
+GROUP=cuts
 TARG=${APP_ROOT}
 TSTIMG=cuts:test
 
-.PHONY: help docker dockert down exec run runt stop up watch
+.PHONY: help bash docker dockert down exec run runit runt1 runtc stop up-dev up watch
 
 help:
-	@echo "Make what? Try: docker, dockert, down, exec, run, runtc, runtep, stop, up, watch"
+	@echo "Make what? Try: docker, dockert, down, exec, run, runtc, runtep, stop, up-dev, up, watch"
 	@echo '  where:'
 	@echo '    help    - show this help message'
 	@echo '    bash    - run Bash in a ${PROG} container (for development)'
@@ -31,7 +31,8 @@ help:
 	@echo '    runt1   - run single test (TARG=testpath) w/ code coverage in test container'
 	@echo '    runtc   - run all tests w/ code coverage in a test container'
 	@echo '    stop    - stop a running standalone ${PROG} server container'
-	@echo '    up      - start a ${PROG} server stack (for development)'
+	@echo '    up-dev  - compose start a ${PROG} server (console logging)'
+	@echo '    up      - compose start a ${PROG} server (background logging)'
 	@echo '    watch   - show logfile for a running ${PROG} server container'
 
 bash:
@@ -44,7 +45,7 @@ dockert:
 	docker build --build-arg TESTS=tests -t ${TSTIMG} .
 
 down:
-	docker stack rm ${STACK}
+	docker compose -p ${GROUP} down
 
 exec:
 	docker cp .bash_env ${NAME}:${ENVLOC}
@@ -65,8 +66,11 @@ runtc:
 stop:
 	docker stop ${NAME}
 
+up-dev:
+	docker compose -f docker-compose.yml -p ${GROUP} up
+
 up:
-	docker stack deploy -c docker-compose.yml ${STACK}
+	docker compose -f docker-compose.yml -p ${GROUP} up --detach
 
 watch:
-	docker logs -f $$(docker ps -f name=vos_cuts -q)
+	docker logs -f $$(docker ps -f name=${GROUP}-${NAME}-1 -q)

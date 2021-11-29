@@ -2,6 +2,8 @@ FROM python:3.9.9
 
 MAINTAINER Tom Hicks <hickst@email.arizona.edu>
 
+# RUN apt-get update && apt-get install -qq -y
+
 ARG TESTS=notests
 
 ENV RUNNING_IN_CONTAINER True

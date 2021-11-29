@@ -10,11 +10,11 @@ gevent==21.8.0
 greenlet==1.1.2
 
 # Data and workers.
-redis==4.0.0
+redis==4.0.2
 celery==5.2.1
 
 # astrocut==0.7
-astropy==4.3.1
+astropy==5.0
 numpy==1.21.4
 
 # Database
