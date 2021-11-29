@@ -1,12 +1,13 @@
-http ':8000//cuts/co/cutout?ra=53.15766&dec=-27.8075199236&filter=F444W&collection=DC19'
-http ':8000//cuts/co/cutout?ra=53.15766&dec=-27.8075199236&filter=F444W&collection=DC19' -o co.fits
-http ':8000//cuts/co/cutout?ra=53.15766&dec=-27.8075199236&filter=F444W&collection=DC20' -o co.fits
-http ':8000//cuts/co/cutout?ra=53.15766&dec=-27.8075199236&filter=F444W&collection=JADES' -o co.fits
-http ':8000//cuts/co/cutout?ra=53.15766&dec=-27.8075199236&filter=F444W&collection=XTRA'
-http ':8000//cuts/co/cutout?ra=53.15766&dec=-27.8075199236&filter=XTRA&collection=JADES'
 http ':8000//cuts/img/query_coordinates?ra=53.15766&dec=-27.8075199236&collection=DC20'
 http ':8000//cuts/img/query_coordinates?ra=53.15766&dec=-27.8075199236&collection=JADE'
 http ':8000//cuts/img/query_coordinates?ra=53.15766&dec=-27.8075199236&collection=JADES'
 http ':8000//cuts/img/query_coordinates?ra=53.15766&dec=-27.8075199236&filter=F444W&collection=DC20'
 http ':8000//cuts/img/query_coordinates?ra=53.15766&dec=-27.8075199236&filter=F444W&collection=JADES'
 http ':8000//cuts/img/query_coordinates?ra=53.15766&dec=-27.8075199236&filter=F444W'
+
+http ':8000//cuts/co/cutout?ra=53.15766&dec=-27.8075199236&filter=F444W&collection=DC19' -o F444W_DC19.fits
+http ':8000//cuts/co/cutout?ra=53.15766&dec=-27.8075199236&filter=F444W&collection=DC20' -o F444W_DC20.fits
+http ':8000//cuts/co/cutout?ra=53.15766&dec=-27.8075199236&filter=F444W&collection=JADES' -o F444W_JADES.fits
+http ':8000//cuts/co/cutout?ra=53.15766&dec=-27.8075199236&filter=F444W&sizeArcMin=1&collection=DC20' -o F444W_DC20_1min.fits
+http ':8000//cuts/co/cutout?ra=53.15766&dec=-27.8075199236&filter=F444W&collection=XTRA'
+http ':8000//cuts/co/cutout?ra=53.15766&dec=-27.8075199236&filter=XTRA&collection=JADES'
