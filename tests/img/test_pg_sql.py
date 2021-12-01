@@ -1,6 +1,6 @@
 # Tests for the PostgreSQL manager class.
 #   Written by: Tom Hicks. 1/13/2021.
-#   Last Modified: Load data root from test config settings.
+#   Last Modified: Update tests to not use jtest table.
 #
 import pytest
 
@@ -232,7 +232,6 @@ class TestPostgreSQLManager(object):
         assert lst is not None
         assert len(lst) >= self.sia_tables_size
         assert 'sia.eazy' in lst
-        assert 'sia.jtest' in lst
         assert 'sia.jwst' in lst
         assert 'tap_schema.tables' not in lst
 
@@ -302,7 +301,6 @@ class TestPostgreSQLManager(object):
         assert lst is not None
         assert len(lst) >= self.sia_tables_size
         assert 'eazy' in lst
-        assert 'jtest' in lst
         assert 'jwst' in lst
         assert 'tables' not in lst
 

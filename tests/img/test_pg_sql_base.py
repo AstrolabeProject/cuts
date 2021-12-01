@@ -1,6 +1,6 @@
 # Tests for the PostgreSQL base class.
 #   Written by: Tom Hicks. 1/13/2021.
-#   Last Modified: Add more clean_id tests.
+#   Last Modified: Update tests to not use jtest table.
 #
 import pytest
 
@@ -101,7 +101,7 @@ class TestPostgreSQLBase(object):
 
 
     def test_fetch_row(self):
-        row = self.base.fetch_row('SELECT id, obs_creator_name from sia.jtest where id = (%s)', [1])
+        row = self.base.fetch_row('SELECT id, obs_creator_name from sia.jwst where id = (%s)', [1])
         assert row is not None
         assert row != []
         assert row[0] == 1
@@ -110,7 +110,7 @@ class TestPostgreSQLBase(object):
 
 
     def test_fetch_rows(self):
-        rows = self.base.fetch_rows('SELECT id, obs_creator_name from sia.jtest where obs_collection = (%s)', ['XTRAS'])
+        rows = self.base.fetch_rows('SELECT id, obs_creator_name from sia.jwst where obs_collection = (%s)', ['XTRAS'])
         assert rows is not None
         assert rows != []
         assert len(rows) == 2
@@ -120,7 +120,7 @@ class TestPostgreSQLBase(object):
 
 
     def test_fetch_rows_2dicts(self):
-        rows = self.base.fetch_rows_2dicts('SELECT id, obs_creator_name from sia.jtest where obs_collection = (%s)', ['XTRAS'])
+        rows = self.base.fetch_rows_2dicts('SELECT id, obs_creator_name from sia.jwst where obs_collection = (%s)', ['XTRAS'])
         assert rows is not None
         assert rows != []
         assert len(rows) == 2
