@@ -13,7 +13,7 @@ SCRIPTS=${PWD}/scripts
 SHELL=/bin/bash
 GROUP=cuts
 TARG=${APP_ROOT}
-TSTIMG=cuts:test
+TSTIMG=astrolabe/cuts:test
 
 .PHONY: help bash docker dockert down exec run runit runt1 runtc stop up-dev up watch
 
