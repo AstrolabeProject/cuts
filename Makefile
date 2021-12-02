@@ -24,7 +24,7 @@ help:
 	@echo '    bash    - run Bash in a ${PROG} container (for development)'
 	@echo '    docker  - build a production ${PROG} server container image'
 	@echo '    dockert - build a server container image with tests (for testing)'
-	@echo '    down    - stop a running ${PROG} server stack (for development)'
+	@echo '    down    - compose stop the running ${PROG} server'
 	@echo '    exec    - exec into running ${PROG} server (CLI arg: NAME=containerID)'
 	@echo '    run     - start a standalone ${PROG} server container (for development)'
 	@echo '    runit   - run the runit program in a test container'
