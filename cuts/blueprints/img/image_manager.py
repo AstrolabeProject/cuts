@@ -3,7 +3,7 @@
 # FITS image files found locally on disk.
 #
 #   Written by: Tom Hicks. 11/14/2019.
-#   Last Modified: Load data root from config settings.
+#   Last Modified: Update deprecated parameter name to "download_name".
 #
 import os
 import sys
@@ -300,7 +300,7 @@ class ImageManager ():
         """ Return the named cutout file, giving it the specified MIME type. """
         if (self.is_cutout_cached(co_filename)):
             return send_from_directory(co_dir, co_filename, mimetype=mimetype,
-                                       as_attachment=True, attachment_filename=co_filename)
+                                       as_attachment=True, download_name=co_filename)
         errMsg = f"Cached image cutout file '{co_filename}' not found in cutouts cache directory"
         current_app.logger.error(errMsg)
         raise exceptions.ImageNotFound(errMsg)
@@ -311,7 +311,7 @@ class ImageManager ():
         if (fits_file_exists(filepath)):
             (imageDir, filename) = os.path.split(filepath)
             return send_from_directory(imageDir, filename, mimetype=mimetype,
-                                       as_attachment=True, attachment_filename=filename)
+                                       as_attachment=True, download_name=filename)
         else:
             errMsg = f"Specified image file '{filepath}' not found"
             current_app.logger.error(errMsg)
