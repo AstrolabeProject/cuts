@@ -1,6 +1,6 @@
 # Tests for the PostgreSQL manager class.
 #   Written by: Tom Hicks. 1/13/2021.
-#   Last Modified: Update tests to not use jtest table.
+#   Last Modified: Comment out test to list catalog tables in TAP schema. Update number of tables.
 #
 import pytest
 
@@ -21,7 +21,7 @@ class TestPostgreSQLManager(object):
     dc19_size = 9
     dc20_size = 9
     jades_size = 9
-    sia_tables_size = 10
+    sia_tables_size = 9
 
     dbconfig = PostgreSQLManager.load_sql_db_config(TEST_DBCONFIG_FILEPATH)
     dbconfig.update({'debug': True})        # add arguments for testing
@@ -226,14 +226,14 @@ class TestPostgreSQLManager(object):
 
 
 
-    def test_list_catalog_tables(self):
-        lst = self.pgmgr.list_catalog_tables()
-        print(lst)
-        assert lst is not None
-        assert len(lst) >= self.sia_tables_size
-        assert 'sia.eazy' in lst
-        assert 'sia.jwst' in lst
-        assert 'tap_schema.tables' not in lst
+    # def test_list_catalog_tables(self):
+    #     lst = self.pgmgr.list_catalog_tables()
+    #     print(lst)
+    #     assert lst is not None
+    #     assert len(lst) >= self.sia_tables_size
+    #     assert 'sia.eazy' in lst
+    #     assert 'sia.jwst' in lst
+    #     assert 'tap_schema.tables' not in lst
 
 
 
