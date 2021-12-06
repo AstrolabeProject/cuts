@@ -1,5 +1,6 @@
 APP_ROOT=/cuts
 CONIMGS=/usr/local/data/vos/images
+CONPORT=8000
 CONSCRIPTS=${APP_ROOT}/scripts
 ENVLOC=/etc/trhenv
 EP=/bin/bash
@@ -52,16 +53,16 @@ exec:
 	docker exec -it ${NAME} bash
 
 run:
-	docker run -d --rm --name ${NAME} -p ${PORT}:${PORT} -v ${IMGS}:${CONIMGS}:ro ${IMG}
+	docker run -d --rm --name ${NAME} -p ${PORT}:${CONPORT} -v ${IMGS}:${CONIMGS}:ro ${IMG}
 
 runit:
 	docker run -it --rm --network ${NET} --name ${NAME} -v ${IMGS}:${CONIMGS}:ro -v ${SCRIPTS}:${CONSCRIPTS} --entrypoint ./scripts/runit ${TSTIMG} ${ARGS}
 
 runt1:
-	docker run -it --rm --network ${NET} --name ${NAME} -p ${PORT}:${PORT} -v ${IMGS}:${CONIMGS}:ro --entrypoint pytest ${TSTIMG} -vv ${TARG}
+	docker run -it --rm --network ${NET} --name ${NAME} -p ${PORT}:${CONPORT} -v ${IMGS}:${CONIMGS}:ro --entrypoint pytest ${TSTIMG} -vv ${TARG}
 
 runtc:
-	docker run -it --rm --network ${NET} --name ${NAME} -p ${PORT}:${PORT} -v ${IMGS}:${CONIMGS}:ro --entrypoint pytest ${TSTIMG} -vv --cov-report term-missing --cov ${TARG}
+	docker run -it --rm --network ${NET} --name ${NAME} -p ${PORT}:${CONPORT} -v ${IMGS}:${CONIMGS}:ro --entrypoint pytest ${TSTIMG} -vv --cov-report term-missing --cov ${TARG}
 
 stop:
 	docker stop ${NAME}
