@@ -11,7 +11,7 @@ greenlet==1.1.2
 
 # Data and workers.
 redis==4.0.2
-celery==5.2.1
+celery==5.2.3
 
 # astrocut==0.7
 astropy==5.0
