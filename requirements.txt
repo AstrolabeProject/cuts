@@ -15,7 +15,7 @@ celery==5.2.3
 
 # astrocut==0.7
 astropy==4.2
-numpy==1.21.4
+numpy==1.22.0
 
 # Database
 psycopg2-binary==2.8.6
