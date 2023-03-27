@@ -10,7 +10,7 @@ gevent==21.1.2
 greenlet==1.0.0
 
 # Data and workers.
-redis==3.5.3
+redis==4.5.3
 celery==5.2.3
 
 # astrocut==0.7
